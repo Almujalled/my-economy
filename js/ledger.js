@@ -79,6 +79,7 @@ export function sortAll(transactions, accounts, rules) {
 
   // The same amount leaving a bank account and arriving in another of your accounts within a few days
   // is a transfer. Into a card account it is the card bill being paid. What you or your rules decided stays.
+  const paidInto = new Map(); // a payment out of a bank account -> { card: the card account it arrived on, sure }
   if (accounts.length > 1) {
     const kindOf = (t) => (acct.get(t.acct) || {}).kind;
     const decided = (s) => s.by === 'you' || s.by === 'rule';
@@ -99,19 +100,40 @@ export function sortAll(transactions, accounts, rules) {
       if (i < 0) continue;
       const other = list.splice(i, 1)[0];
       const cat = kindOf(other) === 'card' ? 'cardbill' : 'own';
+      // `sure`: one of the two lines was a card bill before the amounts matched, so this is no coincidence.
+      if (cat === 'cardbill') paidInto.set(t.id, { card: other.acct, sure: out.get(t.id).cat === cat || out.get(other.id).cat === cat });
       for (const x of [t, other]) if (!decided(out.get(x.id))) out.set(x.id, { cat, by: 'pair' });
     }
   }
 
-  // A card bill counts as living costs only while the purchases behind it are not imported.
-  const cardMonths = new Set();
-  for (const t of transactions) if ((acct.get(t.acct) || {}).kind === 'card' && t.amount < 0) cardMonths.add(monthOf(t.date));
+  // A card bill counts as living costs only while the purchases behind it are not imported: the card it
+  // pays must have purchases here from that month or the month before.
+  // Which card a bill pays is learned from payments that matched money arriving on a card. The place such
+  // a payment went to (see merchantKey) then stands for that card, also for bills its file does not reach.
+  // A bill to a place that pays none of the cards here is for a card with no file, so it keeps counting.
+  // A card that no payment was matched to (its file may leave payments out) may be behind any other bill.
+  const bought = new Map(); // card account -> the months it has purchases in
+  for (const a of accounts) if (a.kind === 'card') bought.set(a.id, new Set());
+  for (const t of transactions) if (t.amount < 0 && bought.has(t.acct)) bought.get(t.acct).add(monthOf(t.date));
+  const pays = new Map(); // place -> the cards it is known to pay
+  for (const t of transactions) {
+    const hit = paidInto.get(t.id);
+    if (!hit || !hit.sure || out.get(t.id).cat !== 'cardbill') continue;
+    const place = merchantKey(t);
+    if (!pays.has(place)) pays.set(place, new Set());
+    pays.get(place).add(hit.card);
+  }
+  const matched = new Set([...pays.values()].flatMap((cards) => [...cards]));
+  const unmatched = [...bought.keys()].filter((id) => !matched.has(id));
+  const covers = (card, m) => bought.get(card).has(m) || bought.get(card).has(addMonths(m, -1));
   for (const t of transactions) {
     const s = out.get(t.id);
     let flow = CAT[s.cat].flow;
     if (s.cat === 'cardbill') {
-      const m = monthOf(t.date);
-      flow = (acct.get(t.acct) || {}).kind === 'card' || cardMonths.has(m) || cardMonths.has(addMonths(m, -1)) ? 'transfer' : 'spending';
+      const m = monthOf(t.date), hit = paidInto.get(t.id);
+      // On the card itself the line is the payment arriving, never a purchase.
+      const cards = bought.has(t.acct) ? null : hit ? [hit.card] : pays.get(merchantKey(t)) || unmatched;
+      flow = !cards || [...cards].some((card) => covers(card, m)) ? 'transfer' : 'spending';
     } else if (t.once && (flow === 'spending' || flow === 'income' || flow === 'debt')) flow = 'oneoff';
     s.flow = flow;
   }
