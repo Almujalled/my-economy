@@ -1,0 +1,9 @@
+# Personal data must never be committed. This repo is public.
+*.private.json
+money-*-numbers.json
+money-dashboard-data*.json
+data/
+*.xlsx
+*.csv
+node_modules/
+.DS_Store
