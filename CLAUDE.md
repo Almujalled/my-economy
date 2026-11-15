@@ -2,145 +2,116 @@
 
 A personal finance dashboard for one user in Norway. Static site on GitHub Pages, public repo.
 The user wants it to become his go-to place for economy, savings and everything money-related,
-and he wants it **simple to read and simple to update**. He rejected two earlier Excel versions
-as too complex. Plain language and few inputs matter more than features.
+and he wants it **simple to read and simple to update**.
 
 ## Hard rules
 
 1. **No personal data in the repo, ever.** The repo is public. No real salary, balances, addresses,
    employer names, account numbers, merchant lists taken from his statements, or exported data files.
    Defaults, tests, docs and examples use made-up round numbers. `.gitignore` blocks the usual files; do not weaken it.
-2. **No secrets in the repo.** Any future token (see Sync) lives only in the user's browser.
-3. **No backend, no analytics, no third-party requests at runtime** unless the user asks. If a library is
-   needed, vendor it into the repo rather than loading it from a CDN.
-4. **No build step** for now. Plain ES modules that GitHub Pages serves as they are. Propose a build
+2. **No secrets in the repo.** Any future token lives only in the user's browser.
+3. **No build step** for now. Plain ES modules that GitHub Pages serves as they are. Propose a build
    tool only if a concrete feature needs it, and ask first.
-5. **Calculations stay pure and tested.** Anything that computes money goes in `js/model.js` (or a sibling
+4. **Calculations stay pure and tested.** Anything that computes money goes in `js/model.js` (or a sibling
    module with no DOM access) and gets a test. Run `npm test` before every commit.
-6. **Never put real numbers in commit messages, issues or PR text either.**
+5. **Never put real numbers in commit messages, issues or PR text either.**
+
+## What the app is
+
+It keeps track of spending and investing. Four pages: **Overview** (last month in a sentence, tiles, do next),
+**Spending** (usual month and categories from bank files), **Net worth** (what you own and owe each month,
+investments against what you put in, and a rough "when can I stop working" age), **Data** (the synced file,
+copies, erase). Once a month the user adds one bank file (the account pay comes into) and types one set of values.
+
+The user chose this shape in November 2026, after finding the earlier version (seven pages, a planner with
+25 inputs, yearly tax and pension tables) too complicated. Keep it this small. A new feature should replace
+something or be clearly worth a place; ask before adding pages, inputs or tables that need yearly updates.
 
 ## Layout
 
 ```
-index.html            shell: header, nav, <main id="view">
-css/style.css         all styles; colours are CSS variables with light and dark values
-js/app.js             hash router (#/home, #/plan, #/networth, #/spending, #/budget, #/guide, #/data), re-renders on store changes
-js/store.js           state, localStorage + IndexedDB, sanitize(), planInputs(), ledger(), transaction and rule helpers
-js/db.js              tiny key-value wrapper on IndexedDB (transactions, backup file handle)
-js/backup.js          keeps the numbers in a file the user chose, in step both ways (Chrome and Edge only; File System Access API)
-js/sync.js            syncStep(): pure decision between saving, taking the file's numbers, and asking
-js/law.js             LAWS: one entry of tax and pension rules per year, LAW (this year's), BENCHMARKS
-js/model.js           SCENARIOS, SLOW, simulate(), maxSpend(), needInvest(), earliestAge(), verdict(), wealth tax, loans, netWorth(), planPath()
-js/pension.js         DELINGSTALL, statePension(), pensionTax(), wageTax(), pensionAgeMonths()
-js/xlsx.js            reads .xlsx with no dependencies (zip + DecompressionStream)
-js/bankfile.js        bank and card exports -> transactions: CSV, header detection, dates and amounts, manual layouts
-js/categories.js      flows, categories, generic default rules, categorise(), cleanText(), merchantKey()
-js/ledger.js          addImport() with duplicate skipping, sortAll(), monthly(), wholeMonths(), usualMonth(), unsortedGroups()
-js/guide.js           CHECKLIST, CALENDAR, nextSteps(): the "what to do next" logic
-js/format.js          kr(), rounding, esc(), today(), month and date words
-js/charts.js          lineChart() and barChart(): small SVG charts with a hover and keyboard readout, no dependencies
-js/pages/*.js         one module per page, each exports mount(root) -> { update(), destroy()? }
-tests/*.test.js       node --test, no dependencies; tests/helpers.js builds .xlsx files in memory
-tools/*.js            command-line helpers: check-bank-file.js (structure only, no contents), checkup.js (summary of a backup file)
-.claude/skills/       update-rules, add-bank-format, money-checkup
+index.html          import map for the libraries, loads js/app.js into <div id="app">
+css/style.css       all styles; colours are CSS variables with light and dark values
+vendor/             Preact 10, htm, Chart.js 4, unchanged, at fixed versions (see vendor/README.md)
+js/app.js           App: header, nav, hash routes (#/overview, #/spending, #/networth, #/data), file sync start
+js/ui.js            html (htm + Preact), hooks, useStore(), useBackup(), download(), NumberField
+js/chart.js         ChartBox (Chart.js in a canvas), baseOptions(), color() from CSS variables
+js/pages/*.js       one component per page, plus sync-note.js (the note under the header)
+js/store.js         state, sanitize() and migration, localStorage + IndexedDB, roughInputs(), ledger(), helpers
+js/model.js         GROWTH, LAST_AGE, GAINS_TAX, investable(), netWorth(), change(), pensionAge(), runsOut(), stopAge()
+js/todo.js          todo(): the "Do next" list
+js/xlsx.js          reads .xlsx with no dependencies (zip + DecompressionStream)
+js/bankfile.js      bank and card exports -> transactions: CSV, header detection, dates and amounts, manual layouts
+js/categories.js    flows, categories, generic default rules, categorise(), cleanText(), merchantKey()
+js/ledger.js        addImport(), sortAll() (transfers, which card a bill pays), monthly(), usualMonth(), unsortedGroups()
+js/backup.js        keeps the numbers in a file the user chose, both ways (Chrome and Edge; File System Access API)
+js/sync.js          syncStep(): pure decision between saving, taking the file's numbers, and asking
+js/db.js, format.js IndexedDB key-value store; kr(), round500(), dates and months in words
+tests/*.test.js     node --test, no dependencies; tests/helpers.js builds .xlsx files in memory
+tools/*.js          check-bank-file.js (structure only, no contents), checkup.js (summary of a copy, printed locally)
+.claude/skills/     add-bank-format, money-checkup
 ```
 
-Everything except `app.js`, `db.js`, `backup.js`, `charts.js` and `pages/` is pure (no DOM, no storage) and tested.
+Everything in `js/` except `app.js`, `ui.js`, `chart.js`, `db.js`, `backup.js` and `pages/` is pure and tested.
 
-### State (localStorage key `money-dashboard-v1`, transactions in IndexedDB `money-dashboard`)
+## State (localStorage key `money-dashboard-v1`, transactions in IndexedDB `money-dashboard`)
 
 ```
-{ schema: 2,
-  profile: { birthYear, takehome, livingNow, portfolio, basis, basisDate,
-             mortgagePayment, mortgageEndYear, mortgageBalance, mortgageRate, mortgageAsOf,
-             pension, pensionPot, pensionPotYear, grossPay, norwayYears, workPot, workRate,
-             horizon, otherWealth, couple },
-  plans: [{ id, name, invest, retAge, spend, scen (0..2), crash, side, sideUntil }],
-  activePlan: id,
-  networth: [{ date:'YYYY-MM-DD', ask, funds, ips, other, cash, home, car, debt, paidIn (number|null), note }],
-  accounts: [{ id, name, kind:'bank'|'card', tail (last 4 digits or ''), sig }],
+{ schema: 3,
+  profile: { birthYear, pension (a month, after tax), mortgageEndYear, spend, invest, mortgage },  // 0 = not given
+  networth: [{ date, ask, funds, ips, other, cash, home, car, debt, putIn (total put in so far | null), note }],
+  accounts: [{ id, name, kind: 'bank'|'card', tail, sig }],
   imports:  [{ id, file, acct, date, from, to, count }],
-  rules:    [{ id, match, cat }],                    // the user's own "description contains X" rules
-  layouts:  [{ headerRow, cols, kind, header }],     // column choices for files the reader did not recognise
+  rules:    [{ id, match, cat }],
+  layouts:  [{ headerRow, cols, kind, header }],
   transactions: [{ id, date, text, amount, acct, imp, type?, mcat?, memo?, principal?, interest?, peer?, cat?, once? }],
-  done: { checklistId: 'YYYY-MM-DD' },
   meta: { exported, saved } }
 ```
 
-- All writes go through `store.update(fn)` or `store.replace(obj)`; both save and notify the page.
-- `store.update` stamps `meta.saved` with the moment of the change. File sync compares that stamp with the
-  file's and with the stamp both last shared (localStorage key `money-dashboard-v1-synced`). Loading a file
-  goes through `store.replace`, which keeps the file's stamp. Never save to the file without looking at it
-  first, and never let an empty browser overwrite a file: both rules live in `syncStep()` and its tests.
-- Transactions are only written to IndexedDB when the array itself is replaced. Never change a transaction
-  in place: use `store.importParsed`, `patchTransactions`, `removeImport`, `flipImport`, or assign a new array.
-- `sanitize()` must accept any input and return a valid state. When the schema changes, bump `SCHEMA`,
+- All writes go through `store.update(fn)` or `store.replace(obj)`; both save and notify. `update` stamps
+  `meta.saved`; the file sync compares that stamp with the file's and with the last shared one
+  (localStorage `money-dashboard-v1-synced`). Never save to the file without looking at it first, and never
+  let an empty browser overwrite a file: both rules live in `syncStep()` and its tests.
+- `sanitize()` accepts anything and returns a valid state. Schemas 1 and 2 (the old planner) are migrated
+  there: pension a year becomes a month, `livingNow`/plan invest/`mortgagePayment` become `spend`/`invest`/
+  `mortgage`, per-entry `paidIn` becomes the running total `putIn`. When the schema changes, bump `SCHEMA`,
   migrate inside `sanitize()`, and add a test with an old-format object.
-- Store years and dates (birthYear, mortgageEndYear, basisDate, mortgageAsOf, pensionPotYear), not ages or
-  "years left", so data stays right over time. Numbers typed on one day are rolled forward from that day.
-- The Plan page uses the latest net worth entry for the portfolio and for wealth tax when one exists.
-- Rules, categories and amounts are worked out when shown, from `store.ledger()`. A transaction stores a
-  category only when the user chose it by hand (`cat`), and `once` when it is a one-off.
-- A card bill is living costs until the card it pays has purchases in the files. `sortAll()` learns which
-  card a bill pays from payments that matched money arriving on a card. A card with no export never gets
-  a file, so its bill must keep counting when other cards are added: there are tests for this.
+- Transactions are only written to IndexedDB when the array is replaced. Never change one in place: use
+  `importParsed`, `patchTransactions`, `removeImport`, `flipImport`, or assign a new array.
+- Store years and dates, not ages. Categories and sums are worked out when shown, from `store.ledger()`;
+  a transaction stores a category only when the user chose it (`cat`), and `once` for a one-off.
+- A card bill is living costs until the card it pays has purchases in the files; `sortAll()` learns which
+  card a bill pays from payments that matched money arriving on a card. A card with no export never gets a
+  file, so its bill must keep counting when other cards are added. The user adds only the main account.
 
-### Page pattern
+## Writing pages
 
-`mount(root)` builds the DOM once and wires listeners. `update()` only refreshes computed output,
-so typing in an input never loses focus. Escape any user text with `esc()` before putting it in HTML:
-that includes transaction text, file names, account names and rule text. Chart labels are inserted as
-markup, so pass only text the app made.
+- Components return `html\`...\``. Text in templates is escaped by Preact; never use `dangerouslySetInnerHTML`.
+- Read state with `useStore()` and write through `store.*`. Typed numbers that save as you type use
+  `NumberField`, so half-typed numbers are not overwritten.
+- Charts go through `ChartBox` with `baseOptions()`. One colour per thing, the same everywhere:
+  investing = `--accent`, living costs = `--live`, mortgage = `--mort`, what you put in = `--muted` dashed.
+  Every chart has its numbers in a table or sentence nearby.
+- A new library goes in `vendor/` the same way (registry download, checksum, unchanged file, README row).
 
 ## Voice and design
 
-- Sentence case, plain verbs, no finance jargon in the UI ("what you paid in", not "cost basis").
-- Lead with the answer as a sentence; numbers rounded to 500 kr for monthly amounts.
-- Amounts formatted with `kr()` (nb-NO). Everything in today's kroner.
-- Keep the existing palette and components; support light and dark; must work at 390 px wide.
-- Empty states say what to do next. Errors say what happened and how to fix it.
-- Say "a bad first ten years" and "steady growth", never "sequence risk" or a withdrawal rate. Answer panels are green
-  (holds through a bad start), amber (holds only with steady growth, or does not hold) and say which in words.
-- Charts: one colour per thing, the same everywhere (investing = accent, living costs = `--live`, mortgage = `--mort`).
-  Prefer one series and ranked bars to many colours. Every chart has its numbers in a table or sentence nearby.
+- Sentence case, plain verbs, no finance jargon ("what you put in", not "cost basis").
+- Lead with the answer as a sentence; monthly amounts rounded to 500 kr with `kr()` (nb-NO), today's kroner.
+- Light and dark; must work at 390 px wide. Empty states say what to do next; errors say what happened and how to fix it.
 
-## Roadmap
+## The rough age
 
-Done: spending from bank exports, monthly budget, deeper net worth, planner refinements (pension helper,
-mortgage balance and rate, yearly rule tables, the bad-decade test, tax per year), a Home page and a Guide.
-
-Open, in the order they matter:
-
-1. **Sync on phones and in other browsers.** The user chose (November 2026) to try the file in a synced folder first.
-   It is built: `js/backup.js` saves to a file the user picks and reads it back, and `syncStep()` in
-   `js/sync.js` decides between saving, taking the file's numbers, and asking when both changed. It only
-   works in Chrome and Edge on a computer, the file is not encrypted, and it has been tested against the
-   browser's private file store, not a real synced folder. If phones or Firefox are needed later, the
-   earlier idea still stands and needs the user's go-ahead: a separate *private* GitHub repo holding one
-   data file, read and written through the GitHub API with a fine-grained token limited to that repo,
-   encrypted in the browser (WebCrypto AES-GCM, key derived from a passphrase). Token and passphrase
-   would live only in the browser.
-2. **A partner in the plan.** The planner is for one person. Spouses share only the doubled wealth tax
-   allowance today; a second pension and a second set of accounts are not modelled.
-3. **IPS and funds outside ASK as their own pots** (locked to 62, taxed differently). Small for most people.
-4. **Card bills and transfers as suggestions** the user confirms, if automatic pairing ever guesses wrong.
-5. **Fund costs**: let the user say what their funds cost, and lower the growth by what is above 0.25%.
-
-## Model notes
-
-- Read `README.md`, "How the plan is calculated", for the rules and the known simplifications.
-- `LAWS` in `js/law.js` holds one entry per year with sources in the README. Never edit numbers from memory:
-  use the update-rules skill, which reads them from official pages. An entry is `'proposed'` until
-  Parliament has passed the budget.
-- The answer is "money lasts to the horizon", not a safe-withdrawal-rate rule. Do not reintroduce a FIRE
-  number as the headline; the user found it confusing. No probability of success either.
-- The headline is tested two ways and both are always shown: steady growth, and a bad first ten years
-  (`SLOW`). A plan is 'safe' only when it holds through the bad start. This is deliberate: a flat average
-  return promises about 5% of savings a year, and the research supports 3 to 3.5%. Do not go back to
-  answering from the middle scenario alone.
-- The pension age for people born after 1963 is an estimate (agreed in 2024, not law). The pages say so.
-- Research behind the model and the advice is summarised with sources in
+- `stopAge()` is the first age from which the investments pay for living costs and mortgage until
+  `LAST_AGE` (95), with the pension from `pensionAge()`. Monthly amounts come from the usual month when the
+  files give one, otherwise from what was typed.
+- `GROWTH` is 2.5% a year above prices, on purpose: across made-up cases it matches 4% with a bad first ten
+  years (minus 2% a year) to within a year nine times in ten. A flat 4% promises ages about three years
+  early. Do not raise it, and do not bring back a FIRE number, a withdrawal rate or a probability of success:
+  the user found those confusing. Research behind this is in
   `.claude/skills/money-checkup/references/norway-money.md`.
+- `GAINS_TAX` (22% times 1.72) is the only tax figure. Check it when a national budget changes share taxation.
+- The pension age for people born after 1963 is an estimate (agreed in 2024, not law). The page says so.
 
 ## Commands
 
@@ -148,5 +119,5 @@ Open, in the order they matter:
 npm test                                   # run tests (Node 20.12+); includes the privacy guard
 npm run serve                              # http://localhost:8080
 npm run bankfile -- path/to/export.xlsx    # how the reader understands a bank file (prints no contents)
-npm run checkup -- path/to/backup.json     # summary of a private backup file, printed locally
+npm run checkup -- path/to/copy.json       # summary of a private copy, printed locally
 ```

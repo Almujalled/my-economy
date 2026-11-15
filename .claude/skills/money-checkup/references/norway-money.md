@@ -1,8 +1,8 @@
 # Personal money in Norway: what the advice rests on
 
 Researched 15 November 2026 from official and consumer sources, named in each section. Amounts and
-rates that change yearly live in `js/law.js`; read them there (or run the update-rules skill) rather
-than quoting the examples here. Sections: 1 order of operations, 2 tax on savings, 3 pension, 4 what
+rates change every year: check the official source named in each section before you quote one, rather
+than quoting the examples here. The dashboard itself uses only one tax figure (`GAINS_TAX` in `js/model.js`). Sections: 1 order of operations, 2 tax on savings, 3 pension, 4 what
 stopping early costs, 5 how much savings can carry, 6 mortgage or investing, 7 investing basics,
 8 pay through the year, 9 what the plan does not count, 10 where to check.
 
@@ -116,12 +116,13 @@ for people up to 33 who do not own a home.
   years. Broad international samples are lower still.
 - The first ten years decide most of it: the real return in the first decade correlates about 0.8 with
   what a retirement could sustain, the 30-year average about 0.4 (Kitces).
-- This is why the dashboard tests "a bad first ten years": minus 2% a year above inflation for ten
-  years, then the chosen growth. That is about the 5th percentile of US decades since 1871 and close to
-  stopping in 1929, 1966, 1972 or 2000. A plan passing that test lands on the research range. A flat 4%
+- This is why the dashboard counts with a careful 2.5% a year above inflation: across a spread of cases it
+  gives about the same stop age as testing "a bad first ten years" (minus 2% a year above inflation for ten
+  years, then 4%). Such a decade is about the 5th percentile of US decades since 1871 and close to
+  stopping in 1929, 1966, 1972 or 2000. A plan that holds through it lands on the research range. A flat 4%
   a year implies spending about 5% of savings yearly, which history does not support.
-- The three growth scenarios (1.5, 4 and 6% above inflation, after fund costs) are roughly a
-  one-in-seven bad, a middle, and a one-in-four good average. Finans Norge's standard for pension
+- For a sense of range: 1.5, 4 and 6% a year above inflation, after fund costs, are roughly a
+  one-in-seven bad, a middle, and a one-in-four good long-run average. Finans Norge's standard for pension
   forecasts is 4.5% for equities before costs (2026); the state assumes 3% for its 70/30 fund.
 - What helps, by evidence: lower spending from the start; a lifelong income floor (the state pension);
   some income in the first years (100 000 kr a year replaces about 3 million kr of savings); a more
@@ -169,18 +170,19 @@ for people up to 33 who do not own a home.
   May to avoid interest; settlement mostly by June; back tax due 20 August and 24 September; G from
   1 May; budget proposal early October.
 
-## 9. What the dashboard's plan does not count
+## 9. What the dashboard's rough age does not count
 
 Say so when it matters for the user in front of you:
 
-- IPS is treated like ASK (in reality locked to 62, taxed differently, no wealth tax).
-- Funds outside ASK are treated like ASK (in reality each sale realises some gain).
-- A typed pension figure is used as it is, whatever the stop age.
-- The employer pension pot is paid out evenly over ten years from the pension age.
-- One person's plan: spouses share only the doubled wealth tax allowance.
+- Wealth tax (the careful 2.5% growth leaves some room for it, but not at large fortunes).
+- IPS and funds outside ASK are treated like ASK (in reality IPS is locked to 62 and taxed differently,
+  and each sale outside ASK realises some gain).
+- The pension figure the user types is used as it is, whatever the stop age; NAV's own figure assumes
+  work until the pension starts.
+- One person: a partner's income, pension and savings are not modelled.
 - No AFP, no disability or sickness, no inheritance, no sale of the home, no moving abroad.
-- Rules as they are today for every future year.
-- Growth is smooth apart from the bad-decade and crash tests.
+- Spending stays what it is now, in today's kroner, for life (apart from the mortgage ending).
+- Growth is smooth: one careful rate every year.
 
 ## 10. Where to check
 
