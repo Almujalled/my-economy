@@ -36,9 +36,12 @@ server and no build step.
 
 About ten minutes, once a month:
 
-1. Export last month's transactions from your bank and credit card (Excel or CSV) and add the files on
-   **Spending**. Adding an overlapping period is safe; lines you already have are skipped. Sort
-   anything the dashboard did not recognise: one choice covers every line from the same place.
+1. Export last month's transactions from your main account (Excel or CSV), the one your pay comes into
+   and your bills are paid from, and add the file on **Spending**. That one account is enough: what you
+   pay to a credit card counts as living costs, as one sum. Add a card's own file as well only if you
+   want what you bought with it sorted. Adding an overlapping period is safe; lines you already have
+   are skipped. Sort anything the dashboard did not recognise: one choice covers every line from the
+   same place.
 2. Add this month's balances on **Net worth**.
 3. Read **Home**, and save a backup file.
 
@@ -167,8 +170,10 @@ This is a planning tool, not tax or financial advice.
 - Each line gets a category. Your own choice wins, then your own rules ("description contains X"),
   then loan payments and transfers recognised from the file, then built-in rules for nationwide chains
   and everyday words. The longest matching text wins.
-- Transfers between your own accounts are not spending. A credit card bill counts as living costs only
-  until you add the card statement; after that the purchases on the card count instead.
+- Transfers between your own accounts are not spending. A credit card bill counts as living costs
+  until that card's own file is added; after that the purchases on the card count instead. Which card
+  a bill pays is worked out from payments that match money arriving on a card. So the bill for a card
+  that has no export keeps counting, as one sum, also when another card's file is added.
 - One-offs (a new roof, a car) are left out of the usual month. The usual month is the average of the
   last 12 whole months in your files.
 
