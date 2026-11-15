@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex,nofollow">
 <title>Money dashboard</title>
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
 <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
@@ -12,13 +13,17 @@
   <div class="wrap top-in">
     <span class="brand">Money dashboard</span>
     <nav id="nav" aria-label="Sections">
+      <a href="#/home">Home</a>
       <a href="#/plan">Plan</a>
       <a href="#/networth">Net worth</a>
       <a href="#/spending">Spending</a>
+      <a href="#/budget">Budget</a>
+      <a href="#/guide">Guide</a>
       <a href="#/data">My data</a>
     </nav>
   </div>
 </header>
+<div class="wrap" id="sync" aria-live="polite"></div>
 <main class="wrap" id="view"></main>
 <noscript><p class="wrap">This dashboard needs JavaScript. Your numbers stay in your browser.</p></noscript>
 <script type="module" src="js/app.js"></script>

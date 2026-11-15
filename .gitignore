@@ -7,3 +7,5 @@ data/
 *.csv
 node_modules/
 .DS_Store
+# Local Claude Code settings (the skills in .claude/skills are shared on purpose)
+.claude/settings.local.json

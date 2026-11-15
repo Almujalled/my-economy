@@ -86,3 +86,104 @@ summary{cursor:pointer;font-weight:650}
 ul.plain{margin:0 0 10px;padding-left:20px;max-width:68ch}
 .grid > *{min-width:0}
 .panel{min-width:0}
+
+/* ---- added with the Spending, Budget, Home and Guide pages ---- */
+svg:focus-visible,.rank:focus-visible,textarea:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+input[type=text],select{max-width:100%}
+.stack{margin-top:16px}
+.row.between{justify-content:space-between;margin-bottom:12px}
+.row.between select{flex:0 1 auto}
+.answer .row{margin-top:12px}
+.plus{color:var(--good)}
+td.wrap,th.wrap{white-space:normal;min-width:180px}
+table.tx select{max-width:210px}
+table input[type=text]{width:100%;min-width:140px}
+
+/* readout box for the charts */
+.tip{position:fixed;z-index:20;pointer-events:none;background:var(--surface);color:var(--ink);border:1px solid var(--line);border-radius:8px;padding:6px 10px;font-size:.85rem;line-height:1.4;box-shadow:0 4px 14px rgba(0,0,0,.18);max-width:240px}
+.tip-h{color:var(--muted);font-size:.78rem}
+.tip i{display:inline-block;width:12px;height:3px;border-radius:2px;margin-right:6px;vertical-align:middle}
+.tip b{font-weight:650}
+
+/* adding files */
+.drop{display:flex;gap:12px;align-items:center;flex-wrap:wrap;border:2px dashed var(--line);border-radius:12px;padding:14px;color:var(--muted);font-size:.92rem}
+.drop.over{border-color:var(--accent);background:var(--accent-soft)}
+.log{list-style:none;margin:10px 0 0;padding:0;display:grid;gap:6px;font-size:.92rem}
+.log li{background:var(--good-soft);border-radius:10px;padding:8px 12px}
+.log li.bad{background:var(--warn-soft)}
+.log:empty{display:none}
+
+/* a list of things to decide, one row each */
+.group{display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap;padding:9px 0;border-bottom:1px solid var(--line)}
+.group:last-child{border-bottom:0}
+.group > div{min-width:0;flex:1 1 220px}
+.group b{display:block;font-weight:600;overflow-wrap:anywhere}
+.group select{flex:0 1 230px}
+
+/* ranked bars: one row per category, all bars on the same scale */
+.ranked{display:grid;gap:2px}
+.rank{display:grid;grid-template-columns:minmax(120px,1.1fr) 2fr 96px 44px;gap:10px;align-items:center;width:100%;text-align:left;background:transparent;border:0;border-radius:8px;padding:6px 4px;color:var(--ink)}
+.rank:hover{background:var(--bg)}
+.rank-b{height:10px;border-radius:5px;background:var(--bg);overflow:hidden}
+.rank-b i{display:block;height:100%;border-radius:5px;background:var(--accent)}
+.rank-v{text-align:right;white-space:nowrap}
+.rank-p{text-align:right;color:var(--muted);font-size:.85rem}
+@media (max-width:520px){
+  .rank{grid-template-columns:1fr auto auto;row-gap:2px}
+  .rank-b{grid-column:1/-1;grid-row:2}
+  nav{flex-wrap:nowrap;overflow-x:auto;max-width:100%;scrollbar-width:none}
+  nav::-webkit-scrollbar{display:none}
+  nav a{white-space:nowrap;padding:6px 10px}
+}
+
+/* pointing out the columns of a file the reader does not know */
+table.preview{font-size:.82rem;background:var(--surface);border-radius:8px}
+table.preview td,table.preview th{text-align:left;padding:4px 8px;max-width:180px;overflow:hidden;text-overflow:ellipsis}
+.fields.two{align-items:start}
+@media (min-width:700px){.fields.two{grid-template-columns:1fr 1fr;column-gap:28px}}
+.field select{width:100%}
+
+/* answer panels now have three states: ok, warn (holds only if markets are steady) and short */
+.answer.warn{border-left-color:var(--warn)}
+.warn .gap{color:var(--warn)}
+.answer a,.prose a,.hint a,.note a,.status a,p a{color:var(--accent);text-underline-offset:2px}
+.key i.dash{background:none;border-top:3px dotted var(--muted);height:0;border-radius:0}
+.check{display:block;font-size:.95rem}
+.check input{margin-right:6px}
+.check small{display:block;color:var(--muted);margin-top:2px}
+td small{display:block;font-size:.78rem;color:var(--muted)}
+td small.down{color:var(--warn)} td small.up{color:var(--good)}
+tr.avg td{font-weight:600}
+table.wrapall td,table.wrapall th{white-space:normal;text-align:left;vertical-align:top}
+table.wrapall td:first-child{white-space:nowrap;font-weight:600}
+.fit td:first-child{white-space:normal}
+
+/* home */
+a.stat{text-decoration:none;color:var(--ink);display:block}
+a.stat:hover{outline:2px solid var(--accent-soft)}
+.ways a{color:var(--ink);text-decoration:none;display:block}
+.ways a:hover{text-decoration:underline}
+.month + .month{margin-top:12px;padding-top:12px;border-top:1px solid var(--line)}
+.month p{margin:2px 0 0}
+.month .todo{color:var(--muted)}
+
+/* guide */
+.step{display:flex;gap:10px;align-items:flex-start;padding:10px 0;border-bottom:1px solid var(--line)}
+.step:last-child{border-bottom:0}
+.step input{margin-top:5px;width:18px;height:18px;accent-color:var(--accent);flex:none}
+.step b{display:block;font-weight:600}
+.step small{display:block;color:var(--muted);font-size:.9rem;max-width:68ch}
+.step.done b{color:var(--muted)}
+.prose h3{font-size:1rem;font-weight:650;margin:16px 0 6px}
+.prose h3:first-of-type{margin-top:4px}
+.prose dl{margin:0;display:grid;grid-template-columns:minmax(120px,200px) 1fr;gap:6px 16px}
+.prose dt{font-weight:600}
+.prose dd{margin:0;color:var(--muted)}
+.prose li{margin-bottom:6px}
+@media (max-width:520px){.prose dl{grid-template-columns:1fr;gap:0}.prose dd{margin-bottom:8px}}
+.fields.wide .field{grid-template-columns:minmax(0,1fr) minmax(150px,1.3fr)}
+
+/* the note under the header about the file your numbers are kept in */
+.syncbar{display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap;margin-top:14px}
+.syncbar > span:first-child{flex:1 1 320px}
+#sync:empty{display:none}
