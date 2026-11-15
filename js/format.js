@@ -16,3 +16,9 @@ export const plural = (n, one, many = one + 's') => `${n.toLocaleString('nb-NO')
 export const pct = (n) => Math.round(n) + '%';
 // Axis labels: 25k, 1.2M
 export const short = (v) => (Math.abs(v) >= 1e6 ? (v / 1e6).toFixed(1) + 'M' : Math.round(v / 1000) + 'k');
+// A moment in words, in the time of this computer: '3 Oct 2026 at 14:05'. Anything that is not a moment: 'at an unknown time'.
+export const when = (iso) => {
+  const d = new Date(iso);
+  if (!/^\d{4}-\d{2}-\d{2}T/.test(String(iso)) || isNaN(d)) return 'at an unknown time';
+  return `${d.getDate()} ${MONTHS[d.getMonth()].slice(0, 3)} ${d.getFullYear()} at ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+};

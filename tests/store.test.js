@@ -3,6 +3,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import * as store from '../js/store.js';
+import { when } from '../js/format.js';
 import { sanitize, defaultState, planInputs, currentBasis, mortgageNow, wealthParts, SCHEMA } from '../js/store.js';
 
 test('sanitize repairs bad data and keeps good data', () => {
@@ -186,4 +187,10 @@ test('importing, sorting, marking and removing transactions through the store', 
   assert.deepEqual([store.get().transactions.length, store.get().imports.length, store.get().accounts.length], [0, 0, 0]);
   off();
   store.replace(null);
+});
+
+test('a moment is put in words, and anything else is called unknown', () => {
+  const d = new Date(2026, 9, 3, 14, 5);            // local time, as the page shows it
+  assert.equal(when(d.toISOString()), '3 Oct 2026 at 14:05');
+  for (const bad of ['', '0', 'yesterday', undefined, null]) assert.equal(when(bad), 'at an unknown time');
 });

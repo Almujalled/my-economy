@@ -1,5 +1,6 @@
 // Home page: where you stand in a few sentences, and the few things worth doing now.
 import * as store from '../store.js';
+import * as backup from '../backup.js';
 import { SCENARIOS, verdict, investable, netWorth, change } from '../model.js';
 import { shareOfIncome } from '../ledger.js';
 import { nextSteps, CALENDAR } from '../guide.js';
@@ -60,7 +61,7 @@ export function mount(root) {
       S.innerHTML = lines.join('') + (stats.length ? `<div class="stats" style="margin-top:14px">${stats.map(([b, l, href]) => `<a class="stat" href="${href}"><b>${b}</b><span>${esc(l)}</span></a>`).join('')}</div>` : '');
     }
 
-    const steps = nextSteps(s, L, day);
+    const steps = nextSteps(s, L, day, 5, { fileBackup: backup.status().state === 'ready' });
     $('steps').innerHTML = steps.length
       ? `<ul class="ways">${steps.map((x) => `<li><a href="${x.link}">${esc(x.text)}</a></li>`).join('')}</ul>`
       : `<p>Nothing needs doing. Come back next month and add the new numbers.</p>`;
@@ -70,5 +71,5 @@ export function mount(root) {
   }
 
   render();
-  return { update: render };
+  return { update: render, destroy: backup.onChange(render) };
 }

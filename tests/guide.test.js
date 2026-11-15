@@ -38,6 +38,8 @@ test('stale numbers, unsorted lines, a plan that is off and an old backup are ea
   assert.match(steps[3].text, /20\s500 kr a month; your plan uses 30\s000 kr/);
   assert.equal(steps[2].link, '#/spending');
   assert.equal(nextSteps(s, ledgerOf(s, DAY), DAY).length, 5);
+  // Numbers that are saved to a file by themselves need no backup reminder.
+  assert.ok(!nextSteps(s, ledgerOf(s, DAY), DAY, 99, { fileBackup: true }).some((x) => x.id === 'backup'));
   assert.equal(nextSteps(s, ledgerOf(s, DAY), DAY, 2).length, 2);
 
   // Everything in order: nothing to do.

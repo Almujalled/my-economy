@@ -60,8 +60,9 @@ export const CALENDAR = {
 /**
  * The few things most worth doing now, from your own data. Most urgent first, at most `max`.
  * s: state. ledger: store.ledger(s). day: 'YYYY-MM-DD'. Returns [{ id, text, link }].
+ * opts.fileBackup: true when the numbers are being saved to a file by themselves, so no backup reminder is needed.
  */
-export function nextSteps(s, ledger, day, max = 5) {
+export function nextSteps(s, ledger, day, max = 5, opts = {}) {
   const out = [], add = (id, text, link) => out.push({ id, text, link });
   const last = s.networth[s.networth.length - 1];
   const txs = s.transactions, hasData = txs.length > 0 || s.networth.length > 0;
@@ -83,7 +84,7 @@ export function nextSteps(s, ledger, day, max = 5) {
     }
   }
   if (s.profile.pension === 0 && s.profile.pensionPot === 0) add('pension', 'Add your pension pot from NAV. Without it the plan is far too gloomy.', '#/plan');
-  if (hasData && (!s.meta.exported || days(s.meta.exported, day) > 30)) {
+  if (hasData && !opts.fileBackup && (!s.meta.exported || days(s.meta.exported, day) > 30)) {
     add('backup', s.meta.exported ? `Take a backup. Your last one is ${days(s.meta.exported, day)} days old, and your numbers exist only in this browser.` : 'Take a backup. Your numbers exist only in this browser.', '#/data');
   }
   if (lawIsOld(year)) add('rules', `The tax rules in this dashboard are for ${LAW.year}. Ask Claude Code to "update the rules" for ${year}.`, '#/data');

@@ -27,7 +27,8 @@ css/style.css         all styles; colours are CSS variables with light and dark 
 js/app.js             hash router (#/home, #/plan, #/networth, #/spending, #/budget, #/guide, #/data), re-renders on store changes
 js/store.js           state, localStorage + IndexedDB, sanitize(), planInputs(), ledger(), transaction and rule helpers
 js/db.js              tiny key-value wrapper on IndexedDB (transactions, backup file handle)
-js/backup.js          keeps a chosen backup file up to date (Chrome and Edge only; File System Access API)
+js/backup.js          keeps the numbers in a file the user chose, in step both ways (Chrome and Edge only; File System Access API)
+js/sync.js            syncStep(): pure decision between saving, taking the file's numbers, and asking
 js/law.js             LAWS: one entry of tax and pension rules per year, LAW (this year's), BENCHMARKS
 js/model.js           SCENARIOS, SLOW, simulate(), maxSpend(), needInvest(), earliestAge(), verdict(), wealth tax, loans, netWorth(), planPath()
 js/pension.js         DELINGSTALL, statePension(), pensionTax(), wageTax(), pensionAgeMonths()
@@ -67,6 +68,10 @@ Everything except `app.js`, `db.js`, `backup.js`, `charts.js` and `pages/` is pu
 ```
 
 - All writes go through `store.update(fn)` or `store.replace(obj)`; both save and notify the page.
+- `store.update` stamps `meta.saved` with the moment of the change. File sync compares that stamp with the
+  file's and with the stamp both last shared (localStorage key `money-dashboard-v1-synced`). Loading a file
+  goes through `store.replace`, which keeps the file's stamp. Never save to the file without looking at it
+  first, and never let an empty browser overwrite a file: both rules live in `syncStep()` and its tests.
 - Transactions are only written to IndexedDB when the array itself is replaced. Never change a transaction
   in place: use `store.importParsed`, `patchTransactions`, `removeImport`, `flipImport`, or assign a new array.
 - `sanitize()` must accept any input and return a valid state. When the schema changes, bump `SCHEMA`,
@@ -103,14 +108,15 @@ mortgage balance and rate, yearly rule tables, the bad-decade test, tax per year
 
 Open, in the order they matter:
 
-1. **Sync between devices.** Confirm the design with the user before building. Two candidates:
-   - What exists: a backup file kept up to date by the browser (`js/backup.js`). In a folder that syncs it
-     already moves data between computers running Chrome or Edge. It does not work on iPhone or in Firefox,
-     and two devices editing at once overwrite each other (the newer file wins when you connect).
-   - The earlier idea: a separate *private* GitHub repo holding one data file, read and written through the
-     GitHub API with a fine-grained token limited to that one repo, encrypted in the browser (WebCrypto
-     AES-GCM, key derived from a passphrase) so the token alone cannot read it. Token and passphrase live
-     only in the browser. Works on every device; more to build and to explain.
+1. **Sync on phones and in other browsers.** The user chose (November 2026) to try the file in a synced folder first.
+   It is built: `js/backup.js` saves to a file the user picks and reads it back, and `syncStep()` in
+   `js/sync.js` decides between saving, taking the file's numbers, and asking when both changed. It only
+   works in Chrome and Edge on a computer, the file is not encrypted, and it has been tested against the
+   browser's private file store, not a real synced folder. If phones or Firefox are needed later, the
+   earlier idea still stands and needs the user's go-ahead: a separate *private* GitHub repo holding one
+   data file, read and written through the GitHub API with a fine-grained token limited to that repo,
+   encrypted in the browser (WebCrypto AES-GCM, key derived from a passphrase). Token and passphrase
+   would live only in the browser.
 2. **A partner in the plan.** The planner is for one person. Spouses share only the doubled wealth tax
    allowance today; a second pension and a second set of accounts are not modelled.
 3. **IPS and funds outside ASK as their own pots** (locked to 62, taxed differently). Small for most people.

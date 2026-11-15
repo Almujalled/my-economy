@@ -13,9 +13,8 @@ server and no build step.
 - This repository is public and contains **no personal numbers**. Keep it that way: never commit a
   backup file, a bank export or a screenshot with real figures. `npm test` fails if a data file, an
   account number or an e-mail address is about to be committed.
-- The browser is the only copy, so keep a backup: **My data > Save a backup file**. In Chrome and Edge
-  on a computer you can also choose a file once and have it kept up to date by itself; put it in a
-  folder that syncs between your computers and it doubles as the way to move your numbers.
+- The browser is the only copy, so keep a backup: **My data > Save a backup file**, or keep your
+  numbers in a file as described under "The same numbers on several computers" below.
 - On iPhone and iPad, add the page to the Home Screen. Safari otherwise removes a site's saved data
   after about a week without use.
 - Every site published under the same `<user>.github.io` address shares browser storage. Do not publish
@@ -42,6 +41,31 @@ About ten minutes, once a month:
    anything the dashboard did not recognise: one choice covers every line from the same place.
 2. Add this month's balances on **Net worth**.
 3. Read **Home**, and save a backup file.
+
+## The same numbers on several computers
+
+In Chrome and Edge on a computer, the dashboard can keep your numbers in a file you choose. Put the
+file in a folder that syncs between your computers (OneDrive, Dropbox, iCloud Drive, Google Drive):
+
+1. On the first computer: **My data > Start a new file**.
+2. On the others: **My data > Use a file I already have**, and choose the same file.
+
+From then on the dashboard saves to the file a few seconds after every change, and takes in changes
+made elsewhere when you open the page or come back to it. Before it saves, it looks at the file:
+
+- only this browser has changed: it saves;
+- only the file has changed: it takes the file's numbers and tells you;
+- both have changed: it asks which to keep, and saves the other set to your Downloads folder.
+
+Good to know:
+
+- After a restart the browser asks for your go-ahead before the page may use the file again. A note at
+  the top has a Connect button; choose "Allow on every visit" if the browser offers it.
+- Give your sync program a moment before you switch computers.
+- The file is not locked with a password. Anyone who can open that folder can read your numbers.
+- Phones, Firefox and Safari cannot save to a file this way. There, use **Save a backup file** and
+  **Open a backup file** to move your numbers by hand.
+- "Erase everything in this browser" stops using the file and leaves the file as it is.
 
 ## Run it locally
 

@@ -182,3 +182,8 @@ a.stat:hover{outline:2px solid var(--accent-soft)}
 .prose li{margin-bottom:6px}
 @media (max-width:520px){.prose dl{grid-template-columns:1fr;gap:0}.prose dd{margin-bottom:8px}}
 .fields.wide .field{grid-template-columns:minmax(0,1fr) minmax(150px,1.3fr)}
+
+/* the note under the header about the file your numbers are kept in */
+.syncbar{display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap;margin-top:14px}
+.syncbar > span:first-child{flex:1 1 320px}
+#sync:empty{display:none}
