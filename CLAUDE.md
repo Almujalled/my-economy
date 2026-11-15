@@ -81,6 +81,9 @@ Everything except `app.js`, `db.js`, `backup.js`, `charts.js` and `pages/` is pu
 - The Plan page uses the latest net worth entry for the portfolio and for wealth tax when one exists.
 - Rules, categories and amounts are worked out when shown, from `store.ledger()`. A transaction stores a
   category only when the user chose it by hand (`cat`), and `once` when it is a one-off.
+- A card bill is living costs until the card it pays has purchases in the files. `sortAll()` learns which
+  card a bill pays from payments that matched money arriving on a card. A card with no export never gets
+  a file, so its bill must keep counting when other cards are added: there are tests for this.
 
 ### Page pattern
 

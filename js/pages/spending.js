@@ -34,7 +34,8 @@ const HTML = `
 
 <div class="panel" id="addPanel">
   <h2>Add bank files</h2>
-  <p>In your online bank, export your transactions as Excel or CSV, for your everyday account and your credit card. Add the files here. They are read in this browser and never uploaded.</p>
+  <p>Start with one file: the account your pay comes into and your bills are paid from. In your online bank, export its transactions as Excel or CSV and add the file here. It is read in this browser and never uploaded.</p>
+  <p class="hint" style="margin:0 0 10px">That one account is enough for your plan. What you pay to a credit card counts as living costs, as one sum. Add a card's own file only if you want what you bought with it sorted too.</p>
   <div class="drop" id="drop">
     <button type="button" class="primary" id="pick">Choose files</button>
     <span>or drop them here. Adding the same period twice is safe: lines you already have are skipped.</span>
@@ -59,7 +60,7 @@ const HTML = `
 <div id="hasData" class="stack" hidden>
   <div class="panel" id="sortPanel" hidden>
     <h2>Sort these</h2>
-    <p class="hint" style="margin:0 0 10px">Lines the dashboard did not recognise, biggest first. Pick a category once and every line from that place follows, now and in future files.</p>
+    <p class="hint" style="margin:0 0 10px">Lines the dashboard did not recognise, biggest first. Pick a category once and every line from that place follows, now and in future files. A payment to your credit card is a Credit card bill, not a move between your own accounts.</p>
     <div id="groups"></div>
     <button type="button" class="quiet" id="moreGroups" hidden></button>
   </div>
@@ -76,7 +77,8 @@ const HTML = `
       <select id="period" aria-label="Period to show"></select>
     </div>
     <div class="ranked" id="ranked"></div>
-    <div class="scroll"><table id="rest" style="margin-top:14px"></table></div>
+    <p class="hint" id="cardNote" style="margin-top:10px" hidden><b>Credit card bill.</b> ${CAT.cardbill.hint}</p>
+    <div class="scroll"><table id="rest" class="fit" style="margin-top:14px"></table></div>
   </div>
 
   <div class="panel" id="bigPanel" hidden>
@@ -125,6 +127,20 @@ export function mount(root) {
 
   // ---------- adding files ----------
   const log = (html, bad) => { const li = document.createElement('li'); if (bad) li.className = 'bad'; li.innerHTML = html; $('log').prepend(li); };
+  // What a file is decides how it is counted: on a bank account a payment to a card is a bill, on a card it is a purchase.
+  const KIND = { bank: 'bank account', card: 'credit card' }, AUTO = { bank: 'Bank account', card: 'Credit card' };
+  function setKind(id, kind) {
+    store.update((s) => {
+      const a = s.accounts.find((x) => x.id === id);
+      if (!a || !KIND[kind] || a.kind === kind) return;
+      if (a.name.startsWith(AUTO[a.kind])) a.name = AUTO[kind] + a.name.slice(AUTO[a.kind].length);   // a name the dashboard made follows the type
+      a.kind = kind;
+    });
+    const a = store.get().accounts.find((x) => x.id === id);
+    if (!a) return;
+    for (const el of $('log').querySelectorAll('[data-read]')) if (el.dataset.read === id) el.textContent = KIND[a.kind];
+    for (const el of $('log').querySelectorAll('[data-kind]')) if (el.dataset.kind === id) el.textContent = `No, it is a ${KIND[a.kind === 'card' ? 'bank' : 'card']}`;
+  }
   function addParsed(fileName, parsed) {
     const res = store.importParsed(parsed, fileName);
     const notes = [];
@@ -133,7 +149,7 @@ export function mount(root) {
     if (parsed.skipped) notes.push(`${plural(parsed.skipped, 'row')} had no date or amount and ${parsed.skipped === 1 ? 'was' : 'were'} ignored.`);
     if (parsed.flipped) notes.push('This statement listed purchases as plus amounts, so they were turned into money out.');
     log(res.added
-      ? `<b>${esc(fileName)}</b>: added ${plural(res.added, 'line')} from ${dmy(parsed.from)} to ${dmy(parsed.to)} to ${esc(res.account.name)}. ${notes.join(' ')} <button type="button" class="quiet" data-undo="${esc(res.imp.id)}">Undo</button>`
+      ? `<b>${esc(fileName)}</b>: read as a <b data-read="${esc(res.account.id)}">${KIND[res.account.kind]}</b>${res.account.tail ? ' ending in ' + esc(res.account.tail) : ''}. Added ${plural(res.added, 'line')} from ${dmy(parsed.from)} to ${dmy(parsed.to)}. ${notes.join(' ')} <button type="button" class="quiet" data-undo="${esc(res.imp.id)}">Undo</button><button type="button" class="quiet" data-kind="${esc(res.account.id)}">No, it is a ${KIND[res.account.kind === 'card' ? 'bank' : 'card']}</button>`
       : `<b>${esc(fileName)}</b>: nothing new. All ${plural(parsed.txs.length, 'line')} were already here.`);
   }
   const waiting = [];           // files whose columns you have to point out, one at a time
@@ -228,7 +244,7 @@ export function mount(root) {
         : `<div class="row"><button type="button" class="primary" id="useLiving">Use this as my living costs</button><span class="status">Your plan uses ${kr(now)} today.</span></div>`;
       if (u.months < 12) h += `<div class="note info">This covers ${plural(u.months, 'month')}. Bills that come once a year and holidays may be missing, so the real figure is likely higher. Add older files until you have 12 months.</div>`;
     }
-    if (unsortedCount) h += `<div class="note warn">${plural(unsortedCount, 'line')} worth ${kr(unsortedSum)} ${unsortedCount === 1 ? 'is' : 'are'} not sorted yet, so the numbers may be off. Sort them below.</div>`;
+    if (unsortedCount) h += `<div class="note warn">${plural(unsortedCount, 'line')} worth ${kr(unsortedSum)} ${unsortedCount === 1 ? 'is' : 'are'} not sorted yet. Until then, money out counts as living costs and money in as income. Start with the lines that are something else: saving, a loan, or money moved between your own accounts.</div>`;
     if (!store.isSaved()) h += `<div class="note warn">This browser is not saving your data. Export a file on the My data page before you close this page.</div>`;
     A.innerHTML = h;
 
@@ -263,6 +279,7 @@ export function mount(root) {
         <span class="rank-n">${CAT[c].name}</span><span class="rank-b"><i style="width:${Math.max(0, (v / top) * 100).toFixed(1)}%"></i></span>
         <span class="rank-v">${kr(period === 'avg' ? round500(v) : v)}</span><span class="rank-p">${row.living > 0 ? pct((v / row.living) * 100) : ''}</span></button>`).join('')
       : `<p class="status">No living costs in this period.</p>`;
+    $('cardNote').hidden = !(row.cats.cardbill > 0);
     const amt = (v) => kr(period === 'avg' ? round500(v) : v);
     $('rest').innerHTML = `<tr><th>${period === 'avg' ? 'The whole month, on average' : 'The whole month'}</th><th></th></tr>
       <tr><td>Money in</td><td>${amt(row.income)}</td></tr>
@@ -348,6 +365,7 @@ export function mount(root) {
     } else if (d.once) store.patchTransactions([d.once], { once: true });
     else if (d.undoOnce) store.patchTransactions([d.undoOnce], { once: false });
     else if (d.rule) store.removeRule(d.rule);
+    else if (d.kind) { const a = store.get().accounts.find((x) => x.id === d.kind); if (a) setKind(a.id, a.kind === 'card' ? 'bank' : 'card'); }
     else if (d.flip) store.flipImport(d.flip);
     else if (d.drop && confirm('Remove the lines that came from this file?')) store.removeImport(d.drop);
     else {
@@ -374,7 +392,7 @@ export function mount(root) {
       if (offer && store.get().rules.some((r) => r.match === offer.key && r.cat === offer.cat)) offer = null;
       store.patchTransactions([d.tx], { cat: v || null });
     } else if (d.onceBox) store.patchTransactions([d.onceBox], { once: e.target.checked });
-    else if (d.acctKind) store.update((s) => { const a = s.accounts.find((x) => x.id === d.acctKind); if (a) a.kind = v === 'card' ? 'card' : 'bank'; });
+    else if (d.acctKind) setKind(d.acctKind, v === 'card' ? 'card' : 'bank');
     else if (d.acctName) store.update((s) => { const a = s.accounts.find((x) => x.id === d.acctName); if (a && v.trim()) a.name = v.trim().slice(0, 60); });
   });
   $('q').addEventListener('input', () => { shownTx = 60; renderTx(); });

@@ -22,7 +22,7 @@ test('generic default rules sort everyday Norwegian transactions', () => {
     ['AutoPASS bompenger', -350, 'transport'], ['Vitusapotek', -200, 'health'], ['Tannlege Eksempel', -1200, 'health'],
     ['Eksempel barnehage', -3000, 'children'], ['Netflix.com', -129, 'leisure'], ['Telenor Norge', -399, 'telecom'],
     ['Gjensidige Forsikring', -900, 'insurance'], ['Strøm og nettleie', -1500, 'power'], ['Kommunale avgifter', -4000, 'housing'],
-    ['IKEA', -2500, 'homeware'], ['Elkjøp', -5000, 'homeware'], ['Frisør Eksempel', -700, 'health'], ['Europris', -200, 'other'], ['Scandic Hotel', -1800, 'travel'], ['Zalando', -700, 'clothes'],
+    ['IKEA', -2500, 'homeware'], ['Elkjøp', -5000, 'homeware'], ['Kid Interiør Eksempel', -400, 'homeware'], ['Frisør Eksempel', -700, 'health'], ['Europris', -200, 'other'], ['Scandic Hotel', -1800, 'travel'], ['Zalando', -700, 'clothes'],
     ['Minibank uttak', -500, 'cash'], ['Årsavgift kort', -300, 'other'], ['Nordnet Bank', -5000, 'invest'], ['Overføring til sparekonto', -2000, 'own'],
     ['Boliglån terminbeløp', -12000, 'mortgage'], ['Lånekassen', -2500, 'loan'], ['Skatteetaten', 8000, 'tax'], ['Skatteetaten restskatt', -3000, 'tax'],
     ['Helt ukjent butikk', -99, 'uncat'], ['Ukjent innbetaling', 99, 'uncatin'],
@@ -39,6 +39,9 @@ test('some words only count in one direction, and whole-word rules do not match 
   assert.equal(cat(tx('2026-01-31', 'Lånekassen', 9000)), 'benefits');
   assert.equal(cat(tx('2026-01-05', 'IF Skadeforsikring', -500)), 'insurance');
   assert.equal(cat(tx('2026-01-05', 'Gifts and more', -500)), 'uncat');         // "if" inside a word is not the insurer
+  // KID is the payment reference on Norwegian bills, so the word alone says nothing about the shop.
+  assert.equal(cat(tx('2026-01-05', 'Eksempel AS', -500, { memo: 'KID 123456789' })), 'uncat');
+  assert.equal(cat(tx('2026-01-05', 'Eksempel AS', -500, { type: 'Giro med KID' })), 'uncat');
   assert.equal(cat(tx('2026-01-05', 'Espresso bar', -50)), 'eatingout');       // not the petrol brand inside "espresso"
   assert.equal(cat(tx('2026-01-05', 'Fremtind Service', -300)), 'transport');  // longest match wins over "fremtind"
   assert.equal(cat(tx('2026-01-05', 'UKJENT', -89, { mcat: 'Eating places and Restaurants' })), 'eatingout');
@@ -160,6 +163,57 @@ test('matching amounts between your accounts are transfers, and card bills are n
   assert.deepEqual(of('Bank Norwegian', -1000), { cat: 'cardbill', by: 'default', flow: 'spending' });
   const rows = monthly(d.transactions, sorted);
   assert.deepEqual(rows.map((r) => [r.month, r.spending, r.transfer]), [['2026-01', 1000, 0], ['2026-02', 900, 0], ['2026-03', 300, 0]]);
+});
+
+// ---------- card bills: which card does a bill pay? ----------
+const cardFile = (txs) => parsed(txs, { kind: 'card', accountTail: '' });
+const flowsOf = (d, sorted, text) => d.transactions.filter((t) => t.text === text).map((t) => sorted.get(t.id).flow);
+
+test('a bill for a card that has no file keeps counting when another card gets its file', () => {
+  // Two cards are paid from the same bank account. Only one of them can be exported.
+  const mine = [{ id: 'r1', match: 'konto:1111', cat: 'cardbill' }];
+  let d = addImport(empty(), parsed([
+    tx('2026-01-15', 'Kort uten fil', -8000, { peer: '1111' }), tx('2026-02-15', 'Kort uten fil', -9000, { peer: '1111' }), tx('2026-03-15', 'Kort uten fil', -7000, { peer: '1111' }),
+    tx('2026-02-20', 'Kredittkort med fil', -2000, { peer: '2222' }), tx('2026-03-20', 'Kredittkort med fil', -2500, { peer: '2222' }), tx('2026-04-20', 'Kredittkort med fil', -1000, { peer: '2222' }),
+  ]), 'bank.xlsx', '2026-05-01');
+  // With no card file at all, every bill is the only record of what was bought.
+  assert.deepEqual(monthly(d.transactions, sortAll(d.transactions, d.accounts, mine)).map((r) => r.spending), [8000, 11000, 9500, 1000]);
+
+  d = addImport(d, cardFile([tx('2026-01-10', 'Restaurant', -2000), tx('2026-02-10', 'Restaurant', -2500), tx('2026-02-21', 'Innbetaling', 2000),
+    tx('2026-03-10', 'Restaurant', -1000), tx('2026-03-21', 'Innbetaling', 2500)]), 'kort.xlsx', '2026-05-01');
+  const sorted = sortAll(d.transactions, d.accounts, mine);
+  assert.deepEqual(flowsOf(d, sorted, 'Kort uten fil'), ['spending', 'spending', 'spending']);
+  // The April bill finds no payment in the card file, which stops in March. It went to the same place as
+  // the bills that did, so it is that card's bill, and what was bought in March is not counted twice.
+  assert.deepEqual(flowsOf(d, sorted, 'Kredittkort med fil'), ['transfer', 'transfer', 'transfer']);
+  assert.deepEqual(monthly(d.transactions, sorted).map((r) => [r.month, r.spending, r.cats.cardbill || 0]),
+    [['2026-01', 10000, 8000], ['2026-02', 11500, 9000], ['2026-03', 8000, 7000], ['2026-04', 0, 0]]);
+});
+
+test('with two card files, each bill follows the file of the card it pays', () => {
+  let d = addImport(empty(), parsed([
+    tx('2026-02-20', 'Kredittkort A', -1000, { peer: '1111' }), tx('2026-03-20', 'Kredittkort A', -1500, { peer: '1111' }),
+    tx('2026-02-22', 'Kredittkort B', -700, { peer: '2222' }), tx('2026-03-22', 'Kredittkort B', -900, { peer: '2222' }),
+  ]), 'bank.xlsx', '2026-04-01');
+  d = addImport(d, cardFile([tx('2026-01-10', 'Restaurant', -1000), tx('2026-02-10', 'Restaurant', -1500), tx('2026-02-21', 'Innbetaling', 1000), tx('2026-03-21', 'Innbetaling', 1500)]), 'a.xlsx', '2026-04-01');
+  // Card B's file starts in March, so its February bill is the only record of what was bought on it in January.
+  d = addImport(d, parsed([tx('2026-03-05', 'Kafe', -400), tx('2026-03-23', 'Innbetaling', 900)], { kind: 'card', accountTail: '7777' }), 'b.xlsx', '2026-04-01');
+  const sorted = sortAll(d.transactions, d.accounts, []);
+  assert.deepEqual(flowsOf(d, sorted, 'Kredittkort A'), ['transfer', 'transfer']);
+  assert.deepEqual(flowsOf(d, sorted, 'Kredittkort B'), ['spending', 'transfer']);
+});
+
+test('a card file that leaves out the payments still keeps its bills from counting twice', () => {
+  let d = addImport(empty(), parsed([tx('2026-01-15', 'Kredittkort', -3000), tx('2026-02-15', 'Kredittkort', -4000), tx('2026-03-15', 'Kredittkort', -5000)]), 'bank.xlsx', '2026-04-01');
+  d = addImport(d, cardFile([tx('2026-02-03', 'Restaurant', -5000)]), 'kort.xlsx', '2026-04-01');
+  // Nothing says which card these bills pay, so they are taken to be for the one card that is here.
+  assert.deepEqual(flowsOf(d, sortAll(d.transactions, d.accounts, []), 'Kredittkort'), ['spending', 'transfer', 'transfer']);
+});
+
+test('two unsorted lines that happen to match do not decide which card the real bills pay', () => {
+  let d = addImport(empty(), parsed([tx('2026-02-10', 'Ukjent mottaker', -500), tx('2026-02-15', 'Kredittkort', -4000), tx('2026-03-15', 'Kredittkort', -5000)]), 'bank.xlsx', '2026-04-01');
+  d = addImport(d, cardFile([tx('2026-02-03', 'Restaurant', -5000), tx('2026-02-11', 'Ukjent butikk', 500)]), 'kort.xlsx', '2026-04-01');
+  assert.deepEqual(flowsOf(d, sortAll(d.transactions, d.accounts, []), 'Kredittkort'), ['transfer', 'transfer']);
 });
 
 test('one-offs leave living costs, and refunds lower the category they belong to', () => {
