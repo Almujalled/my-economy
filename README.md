@@ -1,231 +1,123 @@
 # Money dashboard
 
-A personal dashboard for planning and tracking your money in Norway: when you can stop working,
-what you can live on, where your money goes, and how your net worth moves. It answers in plain
-sentences, and it does the Norwegian tax and pension sums for you. It is a static site with no
-server and no build step.
+Keeps track of your spending and your investing, for one person in Norway. Once a month you add the
+transactions from your main bank account and type what you own and owe. In return you see where the
+money went, how your investments grow against what you put in, and roughly when you could stop
+working. It is a static site with no server and no build step.
 
 ## Your numbers stay with you
 
-- Everything you type, and every bank file you add, is stored in your browser on your device
-  (localStorage, and IndexedDB for bank transactions).
-- Nothing is sent anywhere. There is no backend, no analytics and no external requests.
+- Everything you type, and every bank file you add, is stored in your browser on your device. You can
+  also keep it in a file you choose (see below). Nothing is sent anywhere.
 - This repository is public and contains **no personal numbers**. Keep it that way: never commit a
-  backup file, a bank export or a screenshot with real figures. `npm test` fails if a data file, an
-  account number or an e-mail address is about to be committed.
-- The browser is the only copy, so keep a backup: **My data > Save a backup file**, or keep your
-  numbers in a file as described under "The same numbers on several computers" below.
+  copy of your numbers, a bank export or a screenshot with real figures. `npm test` fails if a data
+  file, an account number or an e-mail address is about to be committed.
 - On iPhone and iPad, add the page to the Home Screen. Safari otherwise removes a site's saved data
   after about a week without use.
 - Every site published under the same `<user>.github.io` address shares browser storage. Do not publish
   pages you do not trust from the same GitHub account, or give this site its own domain.
 
-## What is in it
+## The pages
 
-| Page | What it does |
+| Page | What it shows |
 |---|---|
-| Home | Where you stand in a few sentences, the few things worth doing now, and this month in the money year. |
-| Plan | Three levers (monthly investing, age you stop, living costs) and a plain answer, tested two ways: steady growth and a bad first ten years. Works out your pension, tax and wealth tax year by year. Several named plans, side by side. |
-| Net worth | One entry per month. Shows what you paid in and what the market did, and compares with the plan. The Plan page starts from the latest entry. |
-| Spending | Reads the transaction files you export from your bank and card, in the browser. Sorts each line into a category with rules you can change, and shows what a usual month costs. One click sends that number to the plan. |
-| Budget | Your plan for a normal month, and how each real month went against it. |
-| Guide | Money in Norway in plain words: the order to do things in, how savings and pension are taxed, what stopping early costs, the money year, and a word list. |
-| My data | Backup, moving to another device, erase, and the rules the calculations use. |
+| Overview | Last month in a sentence, how much of your pay you kept, your net worth, and what to do next. |
+| Spending | What a usual month costs and where it goes, by category, from your bank files. Sort the places it does not recognise once, and they stay sorted. |
+| Net worth | What you own and owe, month by month; your investments against what you put in; and the age you could stop working at this pace. |
+| Data | Where your numbers are kept, the file that keeps several computers in step, copies, and starting over. |
 
-## The monthly routine
+## Once a month
 
-About ten minutes, once a month:
-
-1. Export last month's transactions from your main account (Excel or CSV), the one your pay comes into
-   and your bills are paid from, and add the file on **Spending**. That one account is enough: what you
-   pay to a credit card counts as living costs, as one sum. Add a card's own file as well only if you
-   want what you bought with it sorted. Adding an overlapping period is safe; lines you already have
-   are skipped. Sort anything the dashboard did not recognise: one choice covers every line from the
-   same place.
-2. Add this month's balances on **Net worth**.
-3. Read **Home**, and save a backup file.
+1. Export last month's transactions from the account your pay comes into and your bills are paid from
+   (Excel or CSV), and add the file on **Spending**. That one account is enough: what you pay to a
+   credit card counts as living costs, as one sum. Add a card's own file only if you want what you
+   bought with it sorted. Overlapping periods are safe; lines you already have are skipped.
+2. Sort anything new the dashboard did not recognise.
+3. Type this month's values on **Net worth**.
 
 ## The same numbers on several computers
 
-In Chrome and Edge on a computer, the dashboard can keep your numbers in a file you choose. Put the
-file in a folder that syncs between your computers (OneDrive, Dropbox, iCloud Drive, Google Drive):
+In Chrome and Edge on a computer, the dashboard can keep your numbers in a file in a folder that syncs
+between your computers (OneDrive, Dropbox, iCloud Drive, Google Drive). On the first computer choose
+**Data > Start a new file**; on the others **Data > Use a file I already have**. From then on it saves
+to the file a few seconds after every change and takes in changes made elsewhere. It looks at the file
+before every save: if only the file has changed it takes the file's numbers, and if both have changed
+it asks which to keep and saves the other set to your Downloads folder. An empty browser never
+overwrites the file. The file has no password, so anyone who can open the folder can read it.
 
-1. On the first computer: **My data > Start a new file**.
-2. On the others: **My data > Use a file I already have**, and choose the same file.
+Elsewhere, use **Data > Save a copy** and **Open a copy**.
 
-From then on the dashboard saves to the file a few seconds after every change, and takes in changes
-made elsewhere when you open the page or come back to it. Before it saves, it looks at the file:
+## How the numbers are worked out
 
-- only this browser has changed: it saves;
-- only the file has changed: it takes the file's numbers and tells you;
-- both have changed: it asks which to keep, and saves the other set to your Downloads folder.
+**Spending.** Files are read in the browser: `.xlsx` with a small built-in reader, and CSV. Columns are
+found by their header names, which covers the common Norwegian layouts; for a file it does not know,
+you point out the columns once. Only the last four digits of account numbers are kept. Each line gets
+a category: your own choice first, then your own rules ("description contains X"), then loan payments
+and transfers recognised from the file, then built-in rules for nationwide chains and everyday words.
+Moves between your own accounts are not spending. A payment to a credit card counts as living costs
+until that card's own file is added; after that the purchases on the card count instead. One-offs (a
+new roof, a car) are left out of the usual month, which is the average of the last 12 whole months.
 
-Good to know:
+**Net worth.** Investments are ASK, funds and shares outside ASK, IPS and other investments. "Put in so
+far" is everything you have paid into them over the years, without growth; the page fills it in from
+the last value plus what your bank files show moved into investments since.
 
-- After a restart the browser asks for your go-ahead before the page may use the file again. A note at
-  the top has a Connect button; choose "Allow on every visit" if the browser offers it.
-- Give your sync program a moment before you switch computers.
-- The file is not locked with a password. Anyone who can open that folder can read your numbers.
-- Phones, Firefox and Safari cannot save to a file this way. There, use **Save a backup file** and
-  **Open a backup file** to move your numbers by hand.
-- "Erase everything in this browser" stops using the file and leaves the file as it is.
+**When you can stop working.** The first age from which your investments pay for your living costs and
+mortgage until you are 95, with your pension taking over part of it. It uses:
 
-## Run it locally
+- spending, mortgage and investing from your bank files (the usual month), or what you typed before
+  you have files;
+- your investments and what you put in, from your latest values;
+- the pension a month after tax that you type, from NAV and your employers' schemes. It starts at 67
+  plus about a month per birth year after 1963: Parliament agreed to that in 2024, but it is not law;
+- growth of **2.5% a year above prices**, while you work and after. That is careful on purpose. The
+  research on how much savings can carry over 40 to 60 years lands at about 3 to 3.5% of the savings a
+  year, and the first ten years after you stop decide most of it. Across a spread of made-up cases,
+  2.5% gives the same age as assuming 4% a year with a bad first ten years (minus 2% a year) to within
+  a year in nine cases out of ten. A flat 4% would promise ages about three years too early;
+- tax on growth taken out: 37.84% (22% times 1.72), after what you put in has come out tax-free.
+
+It leaves out wealth tax (the careful growth makes some room for it), AFP, a lower pension if you stop
+early (use NAV's figure for that age if you can), and changes in your spending later in life. It is a
+rough answer: it moves when your numbers do.
+
+## Run it, test it, publish it
 
 ES modules do not load from `file://`, so serve the folder:
 
 ```
-npm run serve        # python3 -m http.server 8080
-```
-
-Open http://localhost:8080. No install step is needed.
-
-## Tests and tools
-
-```
+npm run serve                              # python3 -m http.server 8080, then open http://localhost:8080
 npm test                                   # Node 20.12 or newer, built-in test runner, no dependencies
-npm run bankfile -- path/to/export.xlsx    # how the reader understands a bank file; prints column names and counts only
-npm run checkup -- path/to/backup.json     # a summary of a backup file, printed on your own machine
+npm run bankfile -- path/to/export.xlsx    # how the reader understands a bank file; column names and counts only
+npm run checkup -- path/to/copy.json       # a summary of a copy of your numbers, printed on your own machine
 ```
 
-Tests cover every calculation and the file reading, with made-up numbers. They run on every push
-through GitHub Actions.
+Tests cover the calculations, the file reading and the sync decisions, with made-up numbers, and run on
+every push through GitHub Actions. To publish: Settings > Pages > Deploy from a branch > `main`,
+`/ (root)`. The site is public, which is fine because the code holds no personal data.
 
-## Publish on GitHub Pages
+The pages are built with [Preact](https://preactjs.com) and [htm](https://github.com/developit/htm),
+and the charts with [Chart.js](https://www.chartjs.org). Copies are in `vendor/`, at fixed versions;
+see `vendor/README.md`. Nothing is loaded from other servers.
 
-1. Push this folder to a public repository.
-2. Settings > Pages > Build and deployment > Deploy from a branch > `main`, `/ (root)`.
-3. The site appears at `https://<user>.github.io/<repo>/`.
+This is a tracking tool, not tax or financial advice.
 
-The published site is public. That is fine because the code holds no personal data.
+## Sources
 
-## How the plan is calculated
-
-All amounts are in today's kroner. Growth is "above inflation, after fund costs": cautious 1.5%,
-middle 4%, good 6% a year. These are averages for savings that are almost all in a low-cost global
-index fund. Real years are bumpier, which is what the second test is for.
-
-**Two tests.** The answer is given for steady growth and for a bad first ten years: savings lose 2% a
-year to prices for the ten years after you stop, then grow as chosen. Research on long retirements
-finds that the first decade decides most of the outcome, and that a flat average return promises too
-much: steady growth of 4% lets a plan spend about 5% of the savings a year for 40 to 50 years, while
-the historical record supports about 3 to 3.5% before tax. The bad-decade test is about as hard as
-having stopped in 1929, 1966, 1972 or 2000, and brings the plan into that range. A market fall in the
-year you stop can be added as an extra test.
-
-**While you work:** the portfolio grows, you add your monthly investing, and after the mortgage is
-paid off that payment is invested too. Wealth tax is taken from the portfolio.
-
-**After you stop:** each year you take out living costs, plus the mortgage while it runs, plus wealth
-tax, minus pension and any income you still have.
-
-- Tax on what you take out: what you paid in comes out tax-free first. Growth after that is taxed
-  at 22% x 1.72 = 37.84%. In a year with no pension and no other income, the personal allowance and
-  the interest on your mortgage cover part of the growth first (about 66 600 kr with 2026 rules).
-- Wealth tax: 1.0% of taxable wealth above 1.9 million kr (1.1% above 21.5 million; doubled limits for
-  spouses). With a net worth entry it is worked out from the parts: funds at 80%, the home at 25% (70%
-  above 14 million kr), bank and car in full, less debt, where the part of the debt that belongs to
-  the funds is deducted at 80%. As the mortgage is paid down, more wealth is taxed. Without an entry,
-  the one number you typed for "other taxable wealth" is used.
-- Mortgage: with what you owe, the rate and the payment, the loan is followed year by year. Otherwise
-  the year you typed is used.
-
-**Pension.** With your pension pot from NAV and your pay, the state pension is worked out for the age
-you stop: the pot plus 18.1% of pay (up to 7.1 G) for each year you still work, divided by NAV's
-delingstall for your birth year and pension age, topped up by the guarantee pension (cut by 80% of the
-pot-based pension, full with 40 years in Norway), less tax on pension income. The pension age is 67 in
-the law; the plan uses 67 plus one month per birth year after 1963, which is what Parliament agreed in
-2024 but has not yet made law. An employer pension pot, if you give one, grows until the pension age
-and is paid out evenly over ten years. Without a pension pot, the yearly figure you typed is used.
-
-**"You can live on X"** is the highest monthly amount for which the money lasts to your chosen age
-(default 95). After that age the pension goes on.
-
-### Known simplifications
-
-- Constant yearly growth apart from the two tests.
-- One combined portfolio: funds outside ASK, IPS and other investments are treated like ASK. In
-  reality funds outside ASK are taxed on each sale, and IPS is locked until 62, has no wealth tax and is
-  taxed 22% on the whole payout.
-- The tax-free interest on your deposits (skjermingsfradrag) is assumed to keep what you paid in level
-  with prices.
-- A typed pension figure is used as it is, whatever age you stop. NAV's own forecast assumes you work
-  until the pension starts.
-- The plan is for one person. Spouses share only the doubled wealth tax allowance.
-- AFP, disability, sickness, inheritance, selling the home and moving abroad are not modelled.
-- Today's rules are used for every future year. Allowances normally rise with wages, which makes this
-  slightly cautious; a tax reform would change it.
-- The pension estimate can be up to 10% off. The forecasts for delingstall and the pension age for
-  people born in the 1980s and 1990s will move.
-
-This is a planning tool, not tax or financial advice.
-
-## How spending is read
-
-- Files are read in the browser: `.xlsx` with a small built-in reader, and CSV. Columns are found by
-  their header names, which covers the common Norwegian bank and card layouts. If a file is not
-  recognised you point out the date, description and amount columns once, and it is remembered.
-- Money out is negative. Lines the bank has not booked yet are left out. Only the last four digits of
-  account numbers are kept, to tell your own accounts apart.
-- Each line gets a category. Your own choice wins, then your own rules ("description contains X"),
-  then loan payments and transfers recognised from the file, then built-in rules for nationwide chains
-  and everyday words. The longest matching text wins.
-- Transfers between your own accounts are not spending. A credit card bill counts as living costs
-  until that card's own file is added; after that the purchases on the card count instead. Which card
-  a bill pays is worked out from payments that match money arriving on a card. So the bill for a card
-  that has no export keeps counting, as one sum, also when another card's file is added.
-- One-offs (a new roof, a car) are left out of the usual month. The usual month is the average of the
-  last 12 whole months in your files.
-
-## Sources for the rules
-
-Checked 15 November 2026. The rules are in `js/law.js`, one entry per year. The 2027 entry is the
-government's proposal of 7 October 2026 and is marked as such until Parliament has passed the budget.
-
-- Tax on share income 22% and gross-up factor 1.72: Finansdepartementet, "Skattesatser 2026" and
-  "Skattesatser 2027"; Skatteetaten, "Faktor for oppjustering av gevinst/tap eller utbytte på aksjer".
-- ASK: deposits can be withdrawn tax-free first, growth is taxed after skjermingsfradrag: skatteloven
-  § 10-21; Skatteetaten, "Aksjesparekonto (ASK)". Skjermingsrente 3.6% for 2025.
-- Personal allowance 114 540 kr (2026), a general allowance in all ordinary income: Skatteetaten,
-  "Personfradrag".
-- Wealth tax 2026: allowance 1.9 million kr, 1.0% (municipality 0.35% + state 0.65%), 1.1% above
-  21.5 million kr; shares, funds and ASK valued at 80%: Skatteetaten, "Formuesskatt"; skatteloven
-  § 4-12. Home at 25% up to 14 million kr, 70% above (changed in June 2026 with effect for 2026):
-  Skatteetaten, "Formuesverdi bolig". Debt reduction: skatteloven § 4-19, and the worked example in
-  Skatteetaten, "Verdsettingsrabatt ved fastsetting av formue", which is one of the tests.
-- Tax on pay and pension 2026 (bracket tax, national insurance contribution, minimum deductions, the
-  pension tax credit as changed in June 2026): Finansdepartementet, "Skattesatser 2027" (2026 column);
-  Skatteetaten, "Skattefradrag for pensjonsinntekt". Tests reproduce the three pay examples in Prop. 1 LS
-  (2026-2027), table 2.1.
-- Pension: 18.1% of pay up to 7.1 G (folketrygdloven § 20-5); G 136 549 kr from 1 May 2026 (NAV,
-  "Grunnbeløpet"); guarantee pension 253 787 / 234 765 kr and the 80% reduction (folketrygdloven § 20-9
-  to § 20-11; Meld. St. 10 (2025-2026)); delingstall (NAV, "Delingstall.xlsx", published 26 June 2026).
-  Tests reproduce the thresholds in Meld. St. 6 (2023-2024), figure 10.7.
-- Pension age: 67 in folketrygdloven § 20-2. The rise with life expectancy was agreed on 29 February
+- Tax on growth from ASK and funds, 22% times 1.72: Finansdepartementet, "Skattesatser 2026";
+  Skatteetaten, "Aksjesparekonto (ASK)" and "Faktor for oppjustering av gevinst/tap eller utbytte på aksjer".
+- Pension age: 67 in folketrygdloven § 20-2; the rise with life expectancy was agreed on 29 February
   2024 (Innst. 233 S (2023-2024)) and is not yet law.
-- Inflation: SSB, konsumprisindeksen; Norges Bank, Monetary Policy Report 3/26.
-- Spending benchmark on the Guide page: SIFO, Referansebudsjettet 2026.
-
-### What the design rests on
-
-- How much savings can carry over 40 to 60 years, and why the first ten years matter: Early Retirement
-  Now, "Safe Withdrawal Rate Series"; Kitces, "Understanding sequence of return risk" (2014);
-  Morningstar, "The State of Retirement Income" (December 2025); Pfau, "An International Perspective on
-  Safe Withdrawal Rates" (2010), which has 3.13% for a Norway-only investor.
-- Growth assumptions: Finans Norge, "Avtale om avkastningsprognoser" (2026: equities 4.5% above
-  inflation before costs); Finansdepartementet's 3% expected real return for the Government Pension
-  Fund Global.
-- The order to do things in, and the money year: Forbrukerrådet and Finansportalen, Skatteetaten, NAV.
-
-Add a year to `LAWS` in `js/law.js` when the national budget changes the rules. With Claude Code, ask it
-to "update the rules".
+- How much savings can carry, and why the first ten years matter: Early Retirement Now, "Safe Withdrawal
+  Rate Series"; Kitces, "Understanding sequence of return risk" (2014); Morningstar, "The State of
+  Retirement Income" (December 2025); Pfau, "An International Perspective on Safe Withdrawal Rates"
+  (2010). Growth: Finans Norge, "Avtale om avkastningsprognoser" (2026).
 
 ## Working on it with Claude Code
 
-`CLAUDE.md` describes the code and its rules. Three skills in `.claude/skills/` cover the recurring jobs:
+`CLAUDE.md` describes the code and its rules. Two skills in `.claude/skills/`:
 
-- **update-rules**: the yearly update of tax and pension figures from official sources.
 - **add-bank-format**: teach the reader a new bank or card file layout, without the file's contents
   ever being printed or committed.
-- **money-checkup**: go through your own numbers from a backup file, on your machine, and explain where
-  you stand in plain language.
+- **money-checkup**: go through your own numbers from a copy, on your machine, and explain where you
+  stand in plain language.

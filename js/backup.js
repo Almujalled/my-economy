@@ -14,7 +14,7 @@ const WAIT = 4000;                               // save this long after the las
 const LOOK = 30000;                              // while the page is open, look for changes from elsewhere this often
 const TYPES = [{ description: 'Money dashboard data', accept: { 'application/json': ['.json'] } }];
 // Usually the sync program is half-way through writing it. If it stays like this, the file is damaged.
-const UNREADABLE = 'The file cannot be read right now, so nothing is saved to it. It is tried again every half minute. If this does not pass, stop using the file on the My data page and start a new one.';
+const UNREADABLE = 'The file cannot be read right now, so nothing is saved to it. It is tried again every half minute. If this does not pass, stop using the file on the Data page and start a new one.';
 
 let handle = null, ok = false;                   // the file, and whether the browser lets this page use it right now
 let hooks = null;                                // { get(): state, replace(data), touch() } from the app
@@ -109,7 +109,7 @@ async function step() {
     }
   } catch (e) {
     if (e && e.name === 'NotAllowedError') ok = false;
-    else if (e && e.name === 'NotFoundError') info.error = 'The file is gone. It may have been moved or renamed. Choose it again on the My data page.';
+    else if (e && e.name === 'NotFoundError') info.error = 'The file is gone. It may have been moved or renamed. Choose it again on the Data page.';
     else { info.error = 'The file could not be saved just now. It will be tried again.'; schedule(LOOK); }
   } finally {
     busy = false;

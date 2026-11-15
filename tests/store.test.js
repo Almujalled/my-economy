@@ -4,42 +4,94 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import * as store from '../js/store.js';
 import { when } from '../js/format.js';
-import { sanitize, defaultState, planInputs, currentBasis, mortgageNow, wealthParts, SCHEMA } from '../js/store.js';
+import { sanitize, defaultState, roughInputs, SCHEMA } from '../js/store.js';
+
+const entry = (date, o = {}) => ({ date, ask: 0, funds: 0, ips: 0, other: 0, cash: 0, home: 0, car: 0, debt: 0, putIn: null, note: '', ...o });
 
 test('sanitize repairs bad data and keeps good data', () => {
   assert.deepEqual(Object.keys(sanitize(null)), Object.keys(defaultState()));
   assert.deepEqual(Object.keys(sanitize('nonsense')), Object.keys(defaultState()));
-  const s = sanitize({ profile: { takehome: 'x', pension: 1234, basisDate: 'yesterday', couple: 1 }, plans: [{ name: '  A  ', scen: 9, invest: 7000, side: 4000, sideUntil: 'x' }], activePlan: 'nope',
-    networth: [{ date: '2030-02-01', ask: 5, paidIn: 3 }, { date: 'bad' }, { date: '2030-01-01', debt: 3, paidIn: 'x' }], extra: 1 });
+  const s = sanitize({ schema: 3, profile: { birthYear: 1985.5, pension: 21_000, mortgageEndYear: 'soon', spend: -5, invest: 'x', mortgage: 9_000 },
+    networth: [{ date: '2030-02-01', ask: 5, putIn: 3 }, { date: 'bad' }, { date: '2030-01-01', debt: 3, putIn: 'x' }, { date: '2030-02-01', ask: 7, putIn: 4 }], extra: 1 });
   assert.equal(s.schema, SCHEMA);
-  assert.equal(s.profile.takehome, defaultState().profile.takehome);
-  assert.equal(s.profile.pension, 1234);
-  assert.equal(s.profile.basisDate, '');
-  assert.equal(s.profile.couple, 1);
-  assert.equal(s.plans[0].name, 'A');
-  assert.equal(s.plans[0].scen, 2);
-  assert.deepEqual([s.plans[0].side, s.plans[0].sideUntil], [4000, 62]);
-  assert.equal(s.activePlan, s.plans[0].id);
-  assert.deepEqual(s.networth.map((r) => [r.date, r.paidIn]), [['2030-01-01', null], ['2030-02-01', 3]]);
+  assert.deepEqual(s.profile, { birthYear: 0, pension: 21_000, mortgageEndYear: 0, spend: 0, invest: 5_000, mortgage: 9_000 });
+  assert.deepEqual(s.networth, [entry('2030-01-01', { debt: 3 }), entry('2030-02-01', { ask: 7, putIn: 4 })]);  // the same date twice: the last one counts
   assert.equal(s.extra, undefined);
+  assert.deepEqual(sanitize(JSON.parse(JSON.stringify(s))), s, 'a second pass changes nothing');
 });
 
-test('data saved by the first version is brought up to date without losing anything', () => {
+test('data saved by the first version comes across with every number kept', () => {
   // The shape the dashboard stored before transactions existed (schema 1).
   const old = { schema: 1,
-    profile: { birthYear: 1985, takehome: 40000, livingNow: 25000, portfolio: 100000, basis: 80000, mortgagePayment: 9000, mortgageEndYear: 2045, pension: 200000, horizon: 95, otherWealth: 500000 },
-    plans: [{ id: 'p1', name: 'Early', invest: 6000, retAge: 60, spend: 28000, scen: 1, crash: 30 }], activePlan: 'p1',
+    profile: { birthYear: 1985, takehome: 40000, livingNow: 25000, portfolio: 100000, basis: 80000, mortgagePayment: 9000, mortgageEndYear: 2045, pension: 240000, horizon: 95, otherWealth: 500000 },
+    plans: [{ id: 'p0', invest: 1000 }, { id: 'p1', name: 'Early', invest: 6000, retAge: 60, spend: 28000, scen: 1, crash: 30 }], activePlan: 'p1',
     networth: [{ date: '2026-01-01', ask: 90000, funds: 10000, ips: 0, other: 0, cash: 50000, home: 3000000, car: 100000, debt: 2000000, note: 'start' }] };
   const s = sanitize(old);
-  assert.equal(s.schema, 2);
-  for (const [k, v] of Object.entries(old.profile)) assert.equal(s.profile[k], v, k);
-  assert.deepEqual(s.plans, [{ ...old.plans[0], side: 0, sideUntil: 62 }]);
-  assert.deepEqual(s.networth, [{ ...old.networth[0], paidIn: null }]);
-  assert.deepEqual([s.profile.mortgageBalance, s.profile.mortgageRate, s.profile.mortgageAsOf, s.profile.basisDate, s.profile.couple], [0, 0, '', '', 0]);
-  assert.deepEqual([s.profile.pensionPot, s.profile.pensionPotYear, s.profile.grossPay, s.profile.norwayYears, s.profile.workPot, s.profile.workRate], [0, 0, 0, 40, 0, 2]);
-  assert.deepEqual([s.accounts, s.imports, s.rules, s.layouts, s.transactions, s.done], [[], [], [], [], [], {}]);
+  assert.equal(s.schema, 3);
+  // The pension was typed as a year's amount; now it is a month's. Living costs, investing and the mortgage keep their names' meaning.
+  assert.deepEqual(s.profile, { birthYear: 1985, pension: 20000, mortgageEndYear: 2045, spend: 25000, invest: 6000, mortgage: 9000 });
+  // What you had paid in, typed once on the plan page, becomes what the entry says you have put in.
+  assert.deepEqual(s.networth, [entry('2026-01-01', { ask: 90000, funds: 10000, cash: 50000, home: 3000000, car: 100000, debt: 2000000, putIn: 80000, note: 'start' })]);
+  assert.deepEqual([s.accounts, s.imports, s.rules, s.layouts, s.transactions], [[], [], [], [], []]);
   assert.deepEqual(s.meta, { exported: '', saved: '' });
+  assert.deepEqual(['plans', 'activePlan', 'done'].filter((k) => k in s), []);
   assert.deepEqual(sanitize(s), s, 'a second pass changes nothing');
+  // With no mortgage payment, the year the old planner stored by default means nothing and is dropped.
+  assert.equal(sanitize({ ...old, profile: { ...old.profile, mortgagePayment: 0 } }).profile.mortgageEndYear, 0);
+});
+
+test('entries that said what was paid in since the last one become totals, from the day the total was typed', () => {
+  const v2 = { schema: 2, profile: { basis: 100_000, basisDate: '2026-03-01' },
+    networth: [entry('2026-02-01', { ask: 1, paidIn: 9_000 }), entry('2026-03-01', { ask: 1, paidIn: 8_000 }), entry('2026-04-01', { ask: 1, paidIn: 5_000 }),
+      entry('2026-05-01', { ask: 1, paidIn: null }), entry('2026-06-01', { ask: 1, paidIn: -2_000 })].map(({ putIn, ...e }) => e) };
+  assert.deepEqual(sanitize(v2).networth.map((e) => e.putIn), [100_000, 100_000, 105_000, 105_000, 103_000]);
+  // Never typed a total: entries before the first one that says anything stay unknown.
+  const none = { ...v2, profile: {}, networth: [{ ...v2.networth[0], paidIn: null }, { ...v2.networth[1] }, { ...v2.networth[2] }] };
+  assert.deepEqual(sanitize(none).networth.map((e) => e.putIn), [null, 8_000, 13_000]);
+});
+
+test('investments the old planner held without any net worth entry become an entry', () => {
+  const s = sanitize({ schema: 2, profile: { portfolio: 250_000, basis: 200_000, basisDate: '2026-05-01' } });
+  assert.deepEqual(s.networth, [entry('2026-05-01', { ask: 250_000, putIn: 200_000 })]);
+  assert.deepEqual(sanitize({ schema: 3, profile: { portfolio: 250_000 } }).networth, []);   // only old data is moved
+});
+
+test('the rough age is worked out from your files when they have a whole month, otherwise from what you typed', () => {
+  const s = defaultState();
+  const none = { usual: null };
+  assert.equal(roughInputs(s, none, '2026-06-01'), null, 'nothing until the birth year is given');
+  Object.assign(s.profile, { birthYear: 1986, pension: 22_000, spend: 28_000, invest: 6_000, mortgage: 10_000 });
+  s.networth = [entry('2026-01-01', { ask: 500_000, ips: 50_000, putIn: 600_000 })];
+  const typed = roughInputs(s, none, '2026-06-01');
+  assert.deepEqual(typed, { age: 40, worth: 550_000, putIn: 550_000, spend: 28_000, invest: 6_000, mortgage: 10_000, mortgageEndAge: Infinity,
+    pension: 22_000, pensionAge: 67 + 23 / 12, months: 0 });   // more put in than it is worth: counted as worth
+  s.profile.mortgageEndYear = 2041;
+  const files = roughInputs(s, { usual: { living: 31_000, investing: -500, mortgage: 12_000, months: 7 } }, '2026-06-01');
+  assert.deepEqual([files.spend, files.invest, files.mortgage, files.mortgageEndAge, files.months], [31_000, 0, 12_000, 55, 7]);
+  s.profile.mortgage = 0;
+  assert.equal(roughInputs(s, none, '2026-06-01').mortgageEndAge, 55);
+  s.profile.mortgageEndYear = 0;
+  assert.equal(roughInputs(s, none, '2026-06-01').mortgageEndAge, 0, 'no mortgage');
+});
+
+test('values are saved by date, and an account can be told what it is', () => {
+  store.replace(null);
+  store.saveEntry(entry('2026-02-01', { ask: 2 }));
+  store.saveEntry(entry('2026-01-01', { ask: 1 }));
+  store.saveEntry(entry('2026-02-01', { ask: 3 }));
+  assert.deepEqual(store.get().networth.map((e) => [e.date, e.ask]), [['2026-01-01', 1], ['2026-02-01', 3]]);
+  assert.equal(store.latest().ask, 3);
+  store.removeEntry('2026-02-01');
+  assert.equal(store.latest().date, '2026-01-01');
+
+  store.replace({ schema: 3, accounts: [{ id: 'a1', name: 'Bank account …1234', kind: 'bank', tail: '1234' }, { id: 'a2', name: 'My card', kind: 'card' }] });
+  store.setAccount('a1', { kind: 'card' });
+  store.setAccount('a2', { kind: 'bank' });
+  assert.deepEqual(store.get().accounts.map((a) => [a.name, a.kind]), [['Credit card …1234', 'card'], ['My card', 'bank']]);
+  store.setAccount('a2', { name: '  Everyday  ' });
+  store.setAccount('a2', { name: '   ', kind: 'nonsense' });
+  assert.deepEqual(store.get().accounts.map((a) => [a.name, a.kind]), [['Credit card …1234', 'card'], ['Everyday', 'bank']]);
+  store.replace(null);
 });
 
 test('transactions, accounts and rules are checked line by line', () => {
@@ -58,7 +110,7 @@ test('transactions, accounts and rules are checked line by line', () => {
     ],
     layouts: [{ headerRow: -1, cols: { date: 0, text: 2, amount: 3, junk: 9 }, kind: 'bank', header: '' }, { headerRow: 1, cols: { date: 0, text: 1 }, kind: 'card' }, { cols: 'x' }, null,
       { headerRow: 500, cols: { date: 1, text: 0, in: 2, out: -3 }, kind: 'card', header: 'a|b' }],
-    done: { buffer: '2026-01-01', 'Bad Key': '2026-01-01', debt: 'soon' }, meta: { exported: '2026-03-03', saved: '2026-03-03T10:00:00.000Z', other: 1 },
+    done: { buffer: '2026-01-01' }, meta: { exported: '2026-03-03', saved: '2026-03-03T10:00:00.000Z', other: 1 },
   });
   assert.deepEqual(s.layouts, [{ headerRow: -1, cols: { date: 0, text: 2, amount: 3 }, kind: 'bank', header: '' }, { headerRow: -1, cols: { date: 1, text: 0, in: 2 }, kind: 'card', header: 'a|b' }]);
   assert.deepEqual(s.accounts, [{ id: 'a1', name: 'Main', kind: 'bank', tail: '1234', sig: 'bank:1234' }, { id: 'a2', name: 'Account', kind: 'bank', tail: '', sig: '' }, { id: 'a0', name: 'Bank account', kind: 'bank', tail: '', sig: 'bank:' }]);
@@ -69,66 +121,10 @@ test('transactions, accounts and rules are checked line by line', () => {
     { id: 't1', date: '2026-01-10', text: '(no description)', amount: 100, acct: 'a0', imp: '' },
     { id: 't2', date: '2026-01-20', text: 'B', amount: -50, acct: 'a1', imp: 'i1', type: 'T', mcat: 'M', memo: 'note', principal: 10, interest: 5, peer: '9999', cat: 'groceries', once: true },
   ]);
-  assert.deepEqual(s.done, { buffer: '2026-01-01' });
+  assert.equal(s.done, undefined);                 // checklist ticks belonged to the guide, which is gone
   assert.deepEqual(s.meta, { exported: '2026-03-03', saved: '2026-03-03T10:00:00.000Z' });
   assert.equal(sanitize({ meta: { saved: 'not a time' } }).meta.saved, '');
   assert.deepEqual(sanitize(JSON.parse(JSON.stringify(s))), s);
-});
-
-test('planInputs uses the latest net worth entry and derives age and mortgage years', () => {
-  const s = defaultState();
-  s.profile.birthYear = 1990; s.profile.mortgageEndYear = 2040; s.profile.basis = 900;
-  s.networth = [{ date: '2030-01-01', ask: 300, funds: 200, ips: 0, other: 0, cash: 99, home: 1000, car: 1, debt: 400, paidIn: null }];
-  const p = planInputs(s, s.plans[0], 2030);
-  assert.equal(p.age, 40);
-  assert.equal(p.mortgageYearsLeft, 10);
-  assert.equal(p.portfolio, 500);
-  assert.equal(p.basis, 500);   // deposits can never exceed the portfolio
-  assert.deepEqual(p.wealth, { home: 1000, cash: 100, debt: 400 });
-  assert.equal(p.people, 1);
-  s.profile.couple = 1; s.plans[0].side = 5000; s.plans[0].sideUntil = 60;
-  const q = planInputs(s, s.plans[0], 2030);
-  assert.deepEqual([q.people, q.sideIncome, q.sideUntil, q.slow], [2, 5000, 60, undefined]);
-  // Pension: a typed figure until a pension pot from NAV is given; then the state pension is worked out.
-  assert.deepEqual([q.pension, q.state, q.work, q.pensionAge], [0, undefined, undefined, (67 * 12 + 27) / 12]);
-  Object.assign(s.profile, { pensionPot: 2_000_000, pensionPotYear: 2029, grossPay: 700_000, workPot: 300_000, workRate: 5 });
-  const h = planInputs(s, s.plans[0], 2030);
-  assert.deepEqual(h.state, { birthYear: 1990, pot: 2_000_000, potYear: 2029, pay: 700_000, norwayYears: 40, partner: true });
-  assert.deepEqual(h.work, { pot: 300_000, rate: 0.05, pay: 700_000 });
-  s.profile.birthYear = 1950;                       // the helper is for those born 1963 or later
-  assert.equal(planInputs(s, s.plans[0], 2030).state, undefined);
-  s.networth = [];
-  assert.equal(planInputs(s, s.plans[0], 2030).wealth, null);
-  assert.equal(wealthParts(s), null);
-});
-
-test('what you paid in grows with later net worth entries, from the day you typed it', () => {
-  const s = defaultState();
-  s.profile.basis = 100_000; s.profile.basisDate = '2026-03-01';
-  const row = (date, paidIn) => ({ date, ask: 500_000, funds: 0, ips: 0, other: 0, cash: 0, home: 0, car: 0, debt: 0, paidIn });
-  s.networth = [row('2026-02-01', 9_000), row('2026-03-01', 8_000), row('2026-04-01', 5_000), row('2026-05-01', null), row('2026-06-01', -2_000)];
-  assert.equal(currentBasis(s), 103_000);     // only entries after 1 March count: +5 000 and -2 000
-  s.profile.basisDate = '';
-  assert.equal(currentBasis(s), 120_000);     // never typed a date: every entry that says what was paid in counts
-  s.profile.basis = 0; s.networth = [row('2026-04-01', -50)];
-  assert.equal(currentBasis(s), 0);
-});
-
-test('the mortgage is worked out from balance and rate when given, else from the year you typed', () => {
-  const s = defaultState();
-  Object.assign(s.profile, { mortgagePayment: 10_000, mortgageEndYear: 2040 });
-  assert.deepEqual(mortgageNow(s, '2030-06-15'), { yearsLeft: 10, balance: 0, rate: 0, never: false });
-  assert.equal(mortgageNow(s, '2050-01-01').yearsLeft, 0);
-  Object.assign(s.profile, { mortgageBalance: 1_200_000, mortgageRate: 0, mortgageAsOf: '2030-01-10' });
-  assert.deepEqual(mortgageNow(s, '2030-01-20'), { yearsLeft: 10, balance: 1_200_000, rate: 0, never: false });
-  // A year later the balance has been rolled forward by twelve payments.
-  assert.deepEqual(mortgageNow(s, '2031-01-20'), { yearsLeft: 9, balance: 1_080_000, rate: 0, never: false });
-  s.profile.mortgageRate = 12;                  // 12 000 kr of interest a month: the payment never gets there
-  const m = mortgageNow(s, '2030-01-20');
-  assert.equal(m.never, true);
-  assert.ok(m.yearsLeft > 100);
-  s.profile.mortgagePayment = 0;                // no payment: fall back to the typed year
-  assert.equal(mortgageNow(s, '2030-01-20').balance, 0);
 });
 
 // ---------- transactions through the store ----------
